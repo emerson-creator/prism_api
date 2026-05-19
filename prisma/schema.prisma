@@ -10,13 +10,29 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+ 
 }
+
 
 
 // enum for user role
 enum Role {
   USER
   ADMIN
+}
+enum OrderStatus {
+  PENDING
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELED
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
 }
 
 
@@ -34,24 +50,172 @@ model User {
   // relation with order
   orders    Order[]
   cart      Cart[]
+  payments  Payment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([email])
+  @@map("users")
+}
+
+
+model Product {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  price       Decimal @db.Decimal(10, 2)
+  stock       Int @default(0)
+  sku         String   @unique
+  imageUrl    String?
+  isActive    Boolean  @default(true)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  orderItems OrderItem[]
+  cartItems  CartItem[]
+
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+
+
+  @@index([sku])
+  @@index([categoryId])
+  @@index([isActive])
+  @@map("products")
+}
+
+model Category {
+  id          String   @id @default(uuid())
+  name        String   
+  description String?
+  slug        String   @unique
+  imageUrl    String?
+  isActive    Boolean  @default(true)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  products    Product[]
+
+  @@index([slug])
+  @@index([isActive])
+  @@map("categories")
+}
+
+
+model CartItem {
+  id        String   @id @default(uuid())
+  quantity  Int @default(1)
+  
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  
+  cartId    String
+  cart      Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([productId, cartId])
+
+  @@index([productId])
+  @@index([cartId])
+  @@map("cart_items")
+}
+
+
+model OrderItem {
+  id        String   @id @default(uuid())
+  quantity  Int
+  price     Decimal @db.Decimal(10, 2)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+
+  productId String
+  product   Product  @relation(fields: [productId], references: [id])
+
+  orderId   String
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+    @@index([productId])
+    @@index([orderId])
+    @@map("order_items")
 }
 
 model Order {
   id        String   @id @default(uuid())
-  userId    String
-  total     Float
-  createdAt DateTime @default(now())
+  orderNumber String   @unique @default(uuid())
+  status    OrderStatus   @default(PENDING)
+  totalAmount Decimal @db.Decimal(10, 2)
+  total     Decimal @db.Decimal(10, 2)
 
-  // relation with user
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  cartId    String
+  cart      Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
+
+  shippingAddress String?
+
+  orderItems OrderItem[]
+  payment    Payment[]
+
+    @@index([orderNumber])
+    @@index([status])
+    @@index([userId])
+    @@map("orders")
 }
 
 model Cart {
   id        String   @id @default(uuid())
-  userId    String
-  productId String
-  quantity  Int
+
 
   // relation with user
+  userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  orders    Order[]
+  cartItems  CartItem[]  
+  
+  checkedOut   Boolean  @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@map("carts")
+}
+
+model Payment {
+  id        String   @id @default(uuid())
+  status    PaymentStatus   @default(PENDING)
+  currency  String @default("USD")
+  paymentMethod String?
+  transactionId String?
+
+  // relation with user
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // relation with order
+  orderId   String
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([orderId])
+  @@index([transactionId])
+  @@index([userId])
+  @@map("payments")
 }
