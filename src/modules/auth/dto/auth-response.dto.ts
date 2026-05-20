@@ -7,10 +7,10 @@ export class AuthResponseDto {
   refreshToken!: string;
 
   user!: {
-    id: number;
+    id: string;
     email: string;
-    name: string;
-    lastName: string;
+    name: string | null;
+    lastName: string | null;
     role: Role;
   };
 }
