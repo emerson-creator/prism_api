@@ -85,4 +85,24 @@ export class AuthService {
       );
     }
   }
+
+  // Refresh access token using refresh token
+  async refresh(userId: string): Promise<AuthResponseDto> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, email: true, name: true, lastName: true, role: true },
+    });
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    const tokens = await this.generateTokens(user.id.toString(), user.email);
+
+    await this.updateRefreshToken(user.id.toString(), tokens.refreshToken);
+
+    return {
+      ...tokens,
+      user,
+    };
+  }
 }
