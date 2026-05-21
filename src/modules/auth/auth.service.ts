@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { AuthResponseDto } from './dto/auth-response.dto';
 import { RegisterDto } from './dto/register.dto';
@@ -79,7 +79,10 @@ export class AuthService {
         user,
       };
     } catch (error: any) {
-      throw new Error('Error creating user: ' + error.message);
+      console.error('Error during registration:', error);
+      throw new InternalServerErrorException(
+        'An error occurred during registration',
+      );
     }
   }
 }
