@@ -54,11 +54,6 @@ export class RefreshTokenStrategy extends PassportStrategy(
       throw new UnauthorizedException('User not found');
     }
 
-    if (user.refreshToken !== refreshToken) {
-      console.error('Invalid refresh token');
-      throw new UnauthorizedException('Invalid refresh token');
-    }
-
     const isTokenValid = await bcrypt.compare(refreshToken, user.refreshToken);
     if (!isTokenValid) {
       console.error('Invalid refresh token');
@@ -66,7 +61,7 @@ export class RefreshTokenStrategy extends PassportStrategy(
     }
 
     return {
-      sub: user.id,
+      id: user.id,
       email: user.email,
       role: user.role,
     };
