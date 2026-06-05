@@ -5,6 +5,7 @@ import { RegisterDto } from './dto/register.dto';
 import * as bcrypt from 'bcrypt';
 import { randomBytes } from 'crypto';
 import { JwtService } from '@nestjs/jwt';
+import { LoginDto } from './dto/login.dto';
 
 @Injectable()
 export class AuthService {
@@ -65,7 +66,7 @@ export class AuthService {
           email: true,
           name: true,
           lastName: true,
-          role: true,
+          Role: true,
           password: false, // Exclude password from the response
         },
       });
@@ -76,7 +77,13 @@ export class AuthService {
 
       return {
         ...tokens,
-        user,
+        user: {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          lastName: user.lastName,
+          role: user.Role,
+        },
       };
     } catch (error: any) {
       console.error('Error during registration:', error);
@@ -90,7 +97,7 @@ export class AuthService {
   async refresh(userId: string): Promise<AuthResponseDto> {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
-      select: { id: true, email: true, name: true, lastName: true, role: true },
+      select: { id: true, email: true, name: true, lastName: true, Role: true },
     });
     if (!user) {
       throw new Error('User not found');
@@ -102,7 +109,51 @@ export class AuthService {
 
     return {
       ...tokens,
-      user,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        lastName: user.lastName,
+        role: user.Role,
+      },
+    };
+  }
+
+  async logout(userId: string): Promise<void> {
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { refreshToken: null },
+    });
+  }
+
+  async login(loginDto: LoginDto): Promise<AuthResponseDto> {
+    const { email, password } = loginDto;
+
+    const user = await this.prisma.user.findUnique({
+      where: { email },
+    });
+    if (!user) {
+      throw new Error('Invalid email or password');
+    }
+
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
+      throw new Error('Invalid email or password');
+    }
+
+    const tokens = await this.generateTokens(user.id.toString(), user.email);
+
+    await this.updateRefreshToken(user.id.toString(), tokens.refreshToken);
+
+    return {
+      ...tokens,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        lastName: user.lastName,
+        role: user.Role,
+      },
     };
   }
 }

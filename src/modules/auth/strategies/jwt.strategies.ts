@@ -26,10 +26,9 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         email: true,
         name: true,
         lastName: true,
-        role: true,
+        Role: true,
         createdAt: true,
         updatedAt: true,
-        password: false, // Exclude password from the response
       },
     });
 

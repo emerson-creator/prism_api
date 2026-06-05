@@ -47,7 +47,7 @@ export class RefreshTokenStrategy extends PassportStrategy(
 
     const user = await this.prisma.user.findUnique({
       where: { id: payload.sub },
-      select: { id: true, email: true, refreshToken: true, role: true },
+      select: { id: true, email: true, refreshToken: true, Role: true },
     });
     if (!user) {
       console.error('User not found');
@@ -63,7 +63,7 @@ export class RefreshTokenStrategy extends PassportStrategy(
     return {
       id: user.id,
       email: user.email,
-      role: user.role,
+      role: user.Role,
     };
   }
 }
