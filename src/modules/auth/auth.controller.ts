@@ -3,9 +3,9 @@ import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { UseGuards } from '@nestjs/common';
 import { RefreshTokenGuard } from './guards/refresh-token.guard';
-import { GetUser } from './common/decorators/get-user.decorator';
+import { GetUser } from 'src/common/decorators/get-user.decorator';
 import { AuthResponseDto, LogoutResponseDto } from './dto/auth-response.dto';
-import { JwtAuthGuard } from './guards/jwt-auth-guards';
+import { JwtAuthGuard } from 'src/common/guards/jwt-auth-guards';
 import { LoginDto } from './dto/login.dto';
 import {
   ApiBadRequestResponse,
