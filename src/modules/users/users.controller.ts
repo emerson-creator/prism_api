@@ -10,6 +10,9 @@ import type { RequestWithUser } from 'src/common/interfaces/request-with-user.in
 import { Roles } from 'src/common/decorators/roles.decorator';
 import { Role } from '@prisma/client';
 import { Param } from '@nestjs/common';
+import { Patch } from '@nestjs/common';
+import { UpdateUserDto } from './dtos/update-user.dto';
+import { Body } from '@nestjs/common';
 
 @ApiTags('Users')
 @Controller('users')
@@ -61,5 +64,23 @@ export class UsersController {
   async getUserById(@Param('id') id: string): Promise<UserResponseDto> {
     const user = await this.usersService.findOne(id);
     return user;
+  }
+
+  // Upadte user profile
+  @Patch('profile')
+  @ApiOperation({ summary: 'Update current user profile' })
+  @ApiResponse({
+    status: 200,
+    description: 'User profile updated successfully.',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid input data.',
+  })
+  async updateProfile(
+    @Req() req: RequestWithUser,
+    @Body() updateData: UpdateUserDto,
+  ): Promise<UserResponseDto> {
+    return this.usersService.update(req.user.id, updateData);
   }
 }
