@@ -39,5 +39,5 @@ export class RegisterDto {
   @ApiProperty({ enum: Role, example: Role.USER, required: false })
   @IsOptional()
   @IsEnum(Role, { message: 'Invalid role' })
-  role?: Role;
+  Role?: Role;
 }

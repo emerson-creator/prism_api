@@ -17,7 +17,7 @@ export class AuthUserDto {
   lastName!: string | null;
 
   @ApiProperty({ enum: Role, example: Role.USER })
-  role!: Role;
+  Role!: Role;
 }
 
 export class AuthResponseDto {

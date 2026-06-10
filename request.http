@@ -22,7 +22,7 @@ Content-Type: application/json
   "lastName": "User",
   "email": "admin@example.com",
   "password": "Admin123",
-  "role": "ADMIN"
+  "Role": "ADMIN"
 }
 
 

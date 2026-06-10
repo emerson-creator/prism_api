@@ -42,7 +42,13 @@ export class AuthService {
 
   // Register a new user
   async register(registerDto: RegisterDto): Promise<AuthResponseDto> {
-    const { email, password, name, lastName, role = Role.USER } = registerDto;
+    const {
+      email,
+      password,
+      name,
+      lastName,
+      Role: userRole = Role.USER,
+    } = registerDto;
 
     // Check if user already exists
     const existingUser = await this.prisma.user.findUnique({
@@ -61,7 +67,7 @@ export class AuthService {
           password: hashedPassword,
           name,
           lastName,
-          Role: role,
+          Role: userRole,
         },
         select: {
           id: true,
@@ -84,7 +90,7 @@ export class AuthService {
           email: user.email,
           name: user.name,
           lastName: user.lastName,
-          role: user.Role,
+          Role: user.Role,
         },
       };
     } catch (error: any) {
@@ -116,7 +122,7 @@ export class AuthService {
         email: user.email,
         name: user.name,
         lastName: user.lastName,
-        role: user.Role,
+        Role: user.Role,
       },
     };
   }
@@ -154,7 +160,7 @@ export class AuthService {
         email: user.email,
         name: user.name,
         lastName: user.lastName,
-        role: user.Role,
+        Role: user.Role,
       },
     };
   }
