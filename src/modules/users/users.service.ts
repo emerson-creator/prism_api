@@ -4,9 +4,10 @@ import { UserResponseDto } from './dtos/user-response.dto';
 import { BadRequestException } from '@nestjs/common';
 import { UpdateUserDto } from './dtos/update-user.dto';
 import { ChangePasswordDto } from './dtos/change-password.dto';
-
+import * as bcrypt from 'bcrypt';
 @Injectable()
 export class UsersService {
+  private readonly saltRounds = 10;
   constructor(private prisma: PrismaService) {}
   async findOne(userId: string): Promise<UserResponseDto> {
     const user = await this.prisma.user.findUnique({
@@ -90,9 +91,35 @@ export class UsersService {
     if (user.password !== changePasswordDto.currentPassword) {
       throw new BadRequestException('Current password is incorrect');
     }
+
+    const isPasswordValid = await bcrypt.compare(
+      changePasswordDto.newPassword,
+      user.password,
+    );
+    if (isPasswordValid) {
+      throw new BadRequestException(
+        'New password must be different from the current password',
+      );
+    }
+    const hashedPassword = await bcrypt.hash(
+      changePasswordDto.newPassword,
+      this.saltRounds,
+    );
     await this.prisma.user.update({
       where: { id: userId },
-      data: { password: changePasswordDto.newPassword },
+      data: { password: hashedPassword },
+    });
+  }
+
+  async delete(userId: string): Promise<void> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+    await this.prisma.user.delete({
+      where: { id: userId },
     });
   }
 }

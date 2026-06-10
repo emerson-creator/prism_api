@@ -15,6 +15,7 @@ import { UpdateUserDto } from './dtos/update-user.dto';
 import { Body } from '@nestjs/common';
 import { ChangePasswordDto } from './dtos/change-password.dto';
 import { GetUser } from 'src/common/decorators/get-user.decorator';
+import { Delete } from '@nestjs/common';
 
 @ApiTags('Users')
 @Controller('users')
@@ -103,5 +104,38 @@ export class UsersController {
   ): Promise<{ message: string }> {
     await this.usersService.changePassword(id, changePasswordDto);
     return { message: 'Password changed successfully.' };
+  }
+
+  // Delete current user account
+  @Delete('profile')
+  @ApiOperation({ summary: 'Delete current user account' })
+  @ApiResponse({
+    status: 200,
+    description: 'User account deleted successfully.',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid input data.',
+  })
+  async deleteUser(@GetUser('id') id: string): Promise<{ message: string }> {
+    await this.usersService.delete(id);
+    return { message: 'User account deleted successfully.' };
+  }
+
+  // Admin delete user by id
+  @Delete(':id')
+  @Roles(Role.ADMIN)
+  @ApiOperation({ summary: 'Admin delete user by ID' })
+  @ApiResponse({
+    status: 200,
+    description: 'User account deleted successfully.',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'User not found.',
+  })
+  async adminDeleteUser(@Param('id') id: string): Promise<{ message: string }> {
+    await this.usersService.delete(id);
+    return { message: 'User account deleted successfully.' };
   }
 }
