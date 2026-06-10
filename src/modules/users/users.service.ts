@@ -3,6 +3,7 @@ import { PrismaService } from 'src/prisma/prisma.service';
 import { UserResponseDto } from './dtos/user-response.dto';
 import { BadRequestException } from '@nestjs/common';
 import { UpdateUserDto } from './dtos/update-user.dto';
+import { ChangePasswordDto } from './dtos/change-password.dto';
 
 @Injectable()
 export class UsersService {
@@ -74,5 +75,24 @@ export class UsersService {
     });
 
     return updatedUser;
+  }
+
+  async changePassword(
+    userId: string,
+    changePasswordDto: ChangePasswordDto,
+  ): Promise<void> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+    if (user.password !== changePasswordDto.currentPassword) {
+      throw new BadRequestException('Current password is incorrect');
+    }
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { password: changePasswordDto.newPassword },
+    });
   }
 }

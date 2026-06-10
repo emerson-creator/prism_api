@@ -13,6 +13,8 @@ import { Param } from '@nestjs/common';
 import { Patch } from '@nestjs/common';
 import { UpdateUserDto } from './dtos/update-user.dto';
 import { Body } from '@nestjs/common';
+import { ChangePasswordDto } from './dtos/change-password.dto';
+import { GetUser } from 'src/common/decorators/get-user.decorator';
 
 @ApiTags('Users')
 @Controller('users')
@@ -82,5 +84,24 @@ export class UsersController {
     @Body() updateData: UpdateUserDto,
   ): Promise<UserResponseDto> {
     return this.usersService.update(req.user.id, updateData);
+  }
+
+  // change current user password
+  @Patch('profile/password')
+  @ApiOperation({ summary: 'Change current user password' })
+  @ApiResponse({
+    status: 200,
+    description: 'Password changed successfully.',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid input data.',
+  })
+  async changePassword(
+    @GetUser('id') id: string,
+    @Body() changePasswordDto: ChangePasswordDto,
+  ): Promise<{ message: string }> {
+    await this.usersService.changePassword(id, changePasswordDto);
+    return { message: 'Password changed successfully.' };
   }
 }
