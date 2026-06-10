@@ -15,7 +15,7 @@ export class UserResponseDto {
   email!: string;
 
   @ApiProperty({ example: 'John Doe', description: 'User full name' })
-  firstName!: string | null;
+  name!: string | null;
 
   @ApiProperty({ description: 'User last name', example: 'Doe' })
   lastName!: string | null;

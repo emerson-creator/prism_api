@@ -15,7 +15,7 @@ export class UsersService {
       select: {
         id: true,
         email: true,
-        firstName: true,
+        name: true,
         lastName: true,
         Role: true,
         createdAt: true,
@@ -32,7 +32,7 @@ export class UsersService {
       select: {
         id: true,
         email: true,
-        firstName: true,
+        name: true,
         lastName: true,
         Role: true,
         createdAt: true,
@@ -67,7 +67,7 @@ export class UsersService {
       select: {
         id: true,
         email: true,
-        firstName: true,
+        name: true,
         lastName: true,
         Role: true,
         createdAt: true,
@@ -88,7 +88,11 @@ export class UsersService {
     if (!user) {
       throw new NotFoundException('User not found');
     }
-    if (user.password !== changePasswordDto.currentPassword) {
+    const isCurrentPasswordValid = await bcrypt.compare(
+      changePasswordDto.currentPassword,
+      user.password,
+    );
+    if (!isCurrentPasswordValid) {
       throw new BadRequestException('Current password is incorrect');
     }
 

@@ -1,6 +1,7 @@
 // Data transfer object for user registration
 import {
   IsEmail,
+  IsEnum,
   IsNotEmpty,
   IsOptional,
   IsString,
@@ -8,6 +9,7 @@ import {
   MinLength,
 } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
+import { Role } from '@prisma/client';
 
 export class RegisterDto {
   @ApiProperty({ example: 'user@example.com' })
@@ -33,4 +35,9 @@ export class RegisterDto {
   @IsOptional()
   @IsString({ message: 'Last name must be a string' })
   lastName!: string;
+
+  @ApiProperty({ enum: Role, example: Role.USER, required: false })
+  @IsOptional()
+  @IsEnum(Role, { message: 'Invalid role' })
+  role?: Role;
 }

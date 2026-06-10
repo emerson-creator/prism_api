@@ -1,15 +1,90 @@
+@baseUrl = http://localhost:3000/api/v1
+@accessToken = Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIzODRhZTFhNi1lMTJhLTQ4Y2UtOWVhZC1lOTY1ZDU2ZTEzNDkiLCJlbWFpbCI6ImFkbWluQGV4YW1wbGUuY29tIiwiaWF0IjoxNzgxMTE1MjYzLCJleHAiOjE3ODExMTYxNjN9.FW46X1DEkcAij8d2vovXO9RQft0KFge6c2MSMHvfjqM
 
-// auth/login
-POST http://localhost:3000/api/v1/auth/login
+### Auth: register
+POST {{baseUrl}}/auth/register
 Content-Type: application/json
 
 {
-  "email": "user2@example.com",
+  "name": "Jane",
+  "lastName": "Doe",
+  "email": "jane.doe@example.com",
   "password": "contrasena123"
 }
 
 ###
-// auth/logout
+// Auth: register admin user
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
 
-POST http://localhost:3000/api/v1/auth/logout
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiNWFlMzcwZC00ZjAzLTQyNzQtOGIyNy00ZjQxZTNhNzJiMmUiLCJlbWFpbCI6InVzZXIyQGV4YW1wbGUuY29tIiwiaWF0IjoxNzgwNjk4NzAwLCJleHAiOjE3ODA2OTk2MDB9.9yCQ_sdSx3PwlpivnXuzpRz5GBpDv_ju7HDaC1mtQpg
+{
+  "name": "Admin",
+  "lastName": "User",
+  "email": "admin@example.com",
+  "password": "Admin123",
+  "role": "ADMIN"
+}
+
+
+###
+// Auth: login
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "jane.doe@example.com",
+  "password": "contrasena123"
+}
+
+###
+// Auth: logout
+POST {{baseUrl}}/auth/logout
+Authorization: {{accessToken}}
+
+###
+// Users: current profile
+GET {{baseUrl}}/users/profile
+Authorization: {{accessToken}}
+
+###
+// Users: update current profile
+PATCH {{baseUrl}}/users/profile
+Authorization: {{accessToken}}
+Content-Type: application/json
+
+{
+  "name": "Jane",
+  "lastName": "Doe",
+  "email": "jane.doe@example.com"
+}
+
+###
+// Users: change password
+PATCH {{baseUrl}}/users/profile/password
+Authorization: {{accessToken}}
+Content-Type: application/json
+
+{
+  "currentPassword": "contrasena123",
+  "newPassword": "NewPass123"
+}
+
+###
+// Users: delete current account
+DELETE {{baseUrl}}/users/profile
+Authorization: {{accessToken}}
+
+###
+// Admin only: list all users
+GET {{baseUrl}}/users
+Authorization: {{accessToken}}
+
+###
+// Admin only: get user by id
+GET {{baseUrl}}/users/1fb33121-08a0-4fba-90d7-4c43a7e392b7
+Authorization: {{accessToken}}
+
+###
+// Admin only: delete user by id
+DELETE {{baseUrl}}/users/1fb33121-08a0-4fba-90d7-4c43a7e392b7
+Authorization: {{accessToken}}
