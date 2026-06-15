@@ -5,7 +5,7 @@ import { UseGuards } from '@nestjs/common';
 import { RefreshTokenGuard } from './guards/refresh-token.guard';
 import { GetUser } from 'src/common/decorators/get-user.decorator';
 import { AuthResponseDto, LogoutResponseDto } from './dto/auth-response.dto';
-import { JwtAuthGuard } from 'src/common/guards/jwt-auth-guards';
+import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
 import { LoginDto } from './dto/login.dto';
 import {
   ApiBadRequestResponse,
