@@ -55,9 +55,10 @@ export class CategoryController {
     status: 200,
     description: 'List of categories retrieved successfully.',
   })
-  async findAll(
-    @Query() queryDto: QueryCategoryDto,
-  ): Promise<CategoryResponseDto[]> {
+  async findAll(@Query() queryDto: QueryCategoryDto): Promise<{
+    data: CategoryResponseDto[];
+    meta: { total: number; page: number; limit: number; totalPages: number };
+  }> {
     const categories = await this.categoryService.findAll(queryDto);
     return categories;
   }
