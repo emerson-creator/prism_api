@@ -149,4 +149,23 @@ export class CategoryService {
       this.extractProductCount(updatedCategory),
     );
   }
+
+  async delete(id: string): Promise<{ message: string }> {
+    const existingCategory = await this.prisma.category.findUnique({
+      where: { id },
+      include: { _count: { select: { products: true } } },
+    });
+    if (!existingCategory) {
+      throw new Error('Category not found');
+    }
+    if ((existingCategory._count?.products ?? 0) > 0) {
+      throw new Error(
+        'Cannot delete category with associated products. Please remove or reassign products first.',
+      );
+    }
+    await this.prisma.category.delete({
+      where: { id },
+    });
+    return { message: 'Category deleted successfully.' };
+  }
 }

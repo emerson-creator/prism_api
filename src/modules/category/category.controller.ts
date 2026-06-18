@@ -15,6 +15,7 @@ import { QueryCategoryDto } from './dto/query-category.dto';
 import { Patch } from '@nestjs/common';
 import { UpdateCategoryDto } from './dto/update-category.dto';
 import { Param } from '@nestjs/common';
+import { Delete } from '@nestjs/common';
 
 @ApiTags('Categories')
 @Controller('categories')
@@ -127,5 +128,28 @@ export class CategoryController {
   ): Promise<CategoryResponseDto> {
     const category = await this.categoryService.update(id, updateCategoryDto);
     return category;
+  }
+
+  // Delete Category (Admin only)
+  @Delete(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  @ApiBearerAuth('Admin access required')
+  @ApiOperation({ summary: 'Delete a category' })
+  @ApiResponse({
+    status: 200,
+    description: 'Category deleted successfully.',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized. Authentication required.',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden. Admin access required.',
+  })
+  async deleteCategory(@Param('id') id: string): Promise<{ message: string }> {
+    await this.categoryService.delete(id);
+    return { message: 'Category deleted successfully.' };
   }
 }
