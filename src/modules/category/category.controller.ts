@@ -62,4 +62,36 @@ export class CategoryController {
     const categories = await this.categoryService.findAll(queryDto);
     return categories;
   }
+
+  // get category by id (Public)
+  @Get(':id')
+  @ApiOperation({ summary: 'Get category by ID' })
+  @ApiResponse({
+    status: 200,
+    description: 'Category retrieved successfully.',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Category not found.',
+  })
+  async findOne(@Query('id') id: string): Promise<CategoryResponseDto> {
+    const category = await this.categoryService.findOne(id);
+    return category;
+  }
+
+  // get category by slug (Public)
+  @Get('slug/:slug')
+  @ApiOperation({ summary: 'Get category by slug' })
+  @ApiResponse({
+    status: 200,
+    description: 'Category retrieved successfully.',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Category not found.',
+  })
+  async findBySlug(@Query('slug') slug: string): Promise<CategoryResponseDto> {
+    const category = await this.categoryService.findBySlug(slug);
+    return category;
+  }
 }

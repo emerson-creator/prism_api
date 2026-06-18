@@ -84,4 +84,36 @@ export class CategoryService {
       },
     };
   }
+
+  async findOne(id: string): Promise<CategoryResponseDto> {
+    const category = await this.prisma.category.findUnique({
+      where: { id },
+      include: { _count: { select: { products: true } } },
+    });
+    if (!category) {
+      throw new Error('Category not found');
+    }
+    return this.formatCategoryResponse(
+      category,
+      // safe access in case _count is missing
+      (category as Category & { _count?: { products: number } })._count
+        ?.products ?? 0,
+    );
+  }
+
+  async findBySlug(slug: string): Promise<CategoryResponseDto> {
+    const category = await this.prisma.category.findUnique({
+      where: { slug },
+      include: { _count: { select: { products: true } } },
+    });
+    if (!category) {
+      throw new Error('Category not found');
+    }
+    return this.formatCategoryResponse(
+      category,
+      // safe access in case _count is missing
+      (category as Category & { _count?: { products: number } })._count
+        ?.products ?? 0,
+    );
+  }
 }
