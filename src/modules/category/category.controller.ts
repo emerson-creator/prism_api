@@ -12,6 +12,9 @@ import { Body } from '@nestjs/common';
 import { ApiResponse } from '@nestjs/swagger';
 import { CategoryResponseDto } from './dto/category-response.dto';
 import { QueryCategoryDto } from './dto/query-category.dto';
+import { Patch } from '@nestjs/common';
+import { UpdateCategoryDto } from './dto/update-category.dto';
+import { Param } from '@nestjs/common';
 
 @ApiTags('Categories')
 @Controller('categories')
@@ -92,6 +95,37 @@ export class CategoryController {
   })
   async findBySlug(@Query('slug') slug: string): Promise<CategoryResponseDto> {
     const category = await this.categoryService.findBySlug(slug);
+    return category;
+  }
+
+  // Update Category (Admin only)
+  @Patch(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  @ApiBearerAuth('Admin access required')
+  @ApiOperation({ summary: 'Update a category' })
+  @ApiBody({ type: UpdateCategoryDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Category updated successfully.',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad Request. Invalid input data.',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized. Authentication required.',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden. Admin access required.',
+  })
+  async updateCategory(
+    @Param('id') id: string,
+    updateCategoryDto: UpdateCategoryDto,
+  ): Promise<CategoryResponseDto> {
+    const category = await this.categoryService.update(id, updateCategoryDto);
     return category;
   }
 }

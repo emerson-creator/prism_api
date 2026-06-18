@@ -4,10 +4,17 @@ import { CreateCategoryDto } from './dto/create-category.dto';
 import { CategoryResponseDto } from './dto/category-response.dto';
 import { Category, Prisma } from '@prisma/client';
 import { QueryCategoryDto } from './dto/query-category.dto';
+import { UpdateCategoryDto } from './dto/update-category.dto';
 
 @Injectable()
 export class CategoryService {
   constructor(private readonly prisma: PrismaService) {}
+
+  private extractProductCount(
+    category: Category & { _count?: { products: number } },
+  ): number {
+    return category._count?.products ?? 0;
+  }
 
   async create(
     createCategoryDto: CreateCategoryDto,
@@ -71,9 +78,7 @@ export class CategoryService {
       data: categories.map((category) =>
         this.formatCategoryResponse(
           category,
-          // safe access in case _count is missing
-          (category as Category & { _count?: { products: number } })._count
-            ?.products ?? 0,
+          this.extractProductCount(category),
         ),
       ),
       meta: {
@@ -95,9 +100,7 @@ export class CategoryService {
     }
     return this.formatCategoryResponse(
       category,
-      // safe access in case _count is missing
-      (category as Category & { _count?: { products: number } })._count
-        ?.products ?? 0,
+      this.extractProductCount(category),
     );
   }
 
@@ -111,9 +114,39 @@ export class CategoryService {
     }
     return this.formatCategoryResponse(
       category,
-      // safe access in case _count is missing
-      (category as Category & { _count?: { products: number } })._count
-        ?.products ?? 0,
+      this.extractProductCount(category),
+    );
+  }
+
+  async update(
+    id: string,
+    updateCategoryDto: UpdateCategoryDto,
+  ): Promise<CategoryResponseDto> {
+    const existingCategory = await this.prisma.category.findUnique({
+      where: { id },
+    });
+    if (!existingCategory) {
+      throw new Error('Category not found');
+    }
+    if (
+      updateCategoryDto.slug &&
+      updateCategoryDto.slug !== existingCategory.slug
+    ) {
+      const existingSlug = await this.prisma.category.findUnique({
+        where: { slug: updateCategoryDto.slug },
+      });
+      if (existingSlug) {
+        throw new Error('Category slug already exists ');
+      }
+    }
+    const updatedCategory = await this.prisma.category.update({
+      where: { id },
+      data: updateCategoryDto,
+      include: { _count: { select: { products: true } } },
+    });
+    return this.formatCategoryResponse(
+      updatedCategory,
+      this.extractProductCount(updatedCategory),
     );
   }
 }

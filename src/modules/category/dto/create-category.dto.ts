@@ -16,7 +16,7 @@ export class CreateCategoryDto {
   })
   @IsString()
   @IsOptional()
-  description: string | null = null;
+  description?: string; // Cambiado de string | null = null
 
   @ApiProperty({
     description: 'URL-friendly slug for the category',
@@ -24,7 +24,7 @@ export class CreateCategoryDto {
   })
   @IsString()
   @IsOptional()
-  slug: string | null = null;
+  slug?: string; // Cambiado de string | null = null
 
   @ApiProperty({
     description: 'URL of the category image',
@@ -32,7 +32,7 @@ export class CreateCategoryDto {
   })
   @IsString()
   @IsOptional()
-  imageUrl: string | null = null;
+  imageUrl?: string; // Cambiado de string | null = null
 
   @ApiProperty({
     description: 'Indicates if the category is active',
