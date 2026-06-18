@@ -46,7 +46,7 @@ export class CategoryController {
     description: 'Forbidden. Admin access required.',
   })
   async createCategory(
-    createCategoryDto: CreateCategoryDto,
+    @Body() createCategoryDto: CreateCategoryDto,
   ): Promise<CategoryResponseDto> {
     const category = await this.categoryService.create(createCategoryDto);
     return category;
@@ -67,22 +67,6 @@ export class CategoryController {
     return categories;
   }
 
-  // get category by id (Public)
-  @Get(':id')
-  @ApiOperation({ summary: 'Get category by ID' })
-  @ApiResponse({
-    status: 200,
-    description: 'Category retrieved successfully.',
-  })
-  @ApiResponse({
-    status: 404,
-    description: 'Category not found.',
-  })
-  async findOne(@Query('id') id: string): Promise<CategoryResponseDto> {
-    const category = await this.categoryService.findOne(id);
-    return category;
-  }
-
   // get category by slug (Public)
   @Get('slug/:slug')
   @ApiOperation({ summary: 'Get category by slug' })
@@ -94,8 +78,24 @@ export class CategoryController {
     status: 404,
     description: 'Category not found.',
   })
-  async findBySlug(@Query('slug') slug: string): Promise<CategoryResponseDto> {
+  async findBySlug(@Param('slug') slug: string): Promise<CategoryResponseDto> {
     const category = await this.categoryService.findBySlug(slug);
+    return category;
+  }
+
+  // get category by id (Public)
+  @Get(':id')
+  @ApiOperation({ summary: 'Get category by ID' })
+  @ApiResponse({
+    status: 200,
+    description: 'Category retrieved successfully.',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Category not found.',
+  })
+  async findOne(@Param('id') id: string): Promise<CategoryResponseDto> {
+    const category = await this.categoryService.findOne(id);
     return category;
   }
 
@@ -124,7 +124,7 @@ export class CategoryController {
   })
   async updateCategory(
     @Param('id') id: string,
-    updateCategoryDto: UpdateCategoryDto,
+    @Body() updateCategoryDto: UpdateCategoryDto,
   ): Promise<CategoryResponseDto> {
     const category = await this.categoryService.update(id, updateCategoryDto);
     return category;

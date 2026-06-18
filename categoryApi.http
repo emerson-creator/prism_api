@@ -1,0 +1,33 @@
+@baseUrl = http://localhost:3000/api/v1
+@accessToken = Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIzODRhZTFhNi1lMTJhLTQ4Y2UtOWVhZC1lOTY1ZDU2ZTEzNDkiLCJlbWFpbCI6ImFkbWluQGV4YW1wbGUuY29tIiwiaWF0IjoxNzgxNzQ1MjAzLCJleHAiOjE3ODE3NDYxMDN9.O3mMaK0QqlAMqUGXFP_q1txuqaZ6KcDMkph5qOe86Mw
+###
+// Categories: create category
+POST {{baseUrl}}/categories
+Authorization: {{accessToken}}
+Content-Type: application/json
+
+{
+  "name": "Sports & Outdoors",
+  "description": "Category for sports and outdoor equipment."
+}
+###
+// Categories: get all categories
+GET {{baseUrl}}/categories
+###
+// Categories: get category by ID
+GET {{baseUrl}}/categories/b2611c60-5879-4b7d-a86a-da85de1b54d9 
+###
+// Categories: update category
+PATCH {{baseUrl}}/categories/b2611c60-5879-4b7d-a86a-da85de1b54d9
+Authorization: {{accessToken}}
+Content-Type: application/json
+
+{
+  "name": "Updated Sports & Outdoors",
+  "description": "Updated description for sports and outdoor equipment."
+}
+###
+// Categories: delete category
+DELETE {{baseUrl}}/categories/b2611c60-5879-4b7d-a86a-da85de1b54d9
+Authorization: {{accessToken}}
+
