@@ -6,6 +6,7 @@ import { Prisma } from '@prisma/client';
 import { Product } from '@prisma/client';
 import { Category } from '@prisma/client';
 import { QueryProductsDto } from './dto/query-product.dto';
+import { NotFoundException } from '@nestjs/common';
 
 @Injectable()
 export class ProductsService {
@@ -103,5 +104,44 @@ export class ProductsService {
         totalPages,
       },
     };
+  }
+
+  // Get a single product by ID
+  async findOne(id: string): Promise<ProductResponseDto> {
+    const product = await this.prisma.product.findUnique({
+      where: { id },
+      include: { category: true },
+    });
+    if (!product) {
+      throw new NotFoundException('Product not found');
+    }
+    return this.toProductResponseDto(product);
+  }
+
+  // Update a product by ID
+  async update(
+    id: string,
+    updateProductDto: Partial<CreateProductDto>,
+  ): Promise<ProductResponseDto> {
+    // Check if the product exists
+    const existingProduct = await this.prisma.product.findUnique({
+      where: { id },
+    });
+    if (!existingProduct) {
+      throw new NotFoundException('Product not found');
+    }
+
+    const updatedProduct = await this.prisma.product.update({
+      where: { id },
+      data: {
+        ...updateProductDto,
+        price: updateProductDto.price
+          ? new Prisma.Decimal(updateProductDto.price)
+          : undefined,
+      },
+      include: { category: true },
+    });
+
+    return this.toProductResponseDto(updatedProduct);
   }
 }

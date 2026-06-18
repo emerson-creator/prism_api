@@ -1,7 +1,7 @@
 import { Controller } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { ProductsService } from './products.service';
-import { Body, Post, UseGuards, Get } from '@nestjs/common';
+import { Body, Post, UseGuards, Get, Param } from '@nestjs/common';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -10,6 +10,7 @@ import { ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { CreateProductDto } from './dto/create-product.dto';
 import { Query } from '@nestjs/common';
 import { QueryProductsDto } from './dto/query-product.dto';
+import { UpdateProductDto } from './dto/update-product.dto';
 
 @ApiTags('Products')
 @Controller('products')
@@ -44,5 +45,40 @@ export class ProductsController {
   @ApiResponse({ status: 500, description: 'Internal Server Error.' })
   async findAll(@Query() queryDto: QueryProductsDto) {
     return await this.productService.findAll(queryDto);
+  }
+
+  // Get product by ID endpoint
+  @Get(':id')
+  @ApiOperation({ summary: 'Get a product by ID' })
+  @ApiResponse({
+    status: 200,
+    description: 'The product has been successfully retrieved.',
+  })
+  @ApiResponse({ status: 404, description: 'Product not found.' })
+  @ApiResponse({ status: 500, description: 'Internal Server Error.' })
+  async findOne(@Param('id') id: string) {
+    return await this.productService.findOne(id);
+  }
+
+  //Update product endpoint, only accessible by admin users
+  @Post(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  @ApiOperation({ summary: 'Update a product by ID' })
+  @ApiResponse({
+    status: 200,
+    description: 'The product has been successfully updated.',
+  })
+  @ApiResponse({ status: 400, description: 'Bad Request.' })
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  @ApiResponse({ status: 403, description: 'Forbidden.' })
+  @ApiResponse({ status: 404, description: 'Product not found.' })
+  @ApiResponse({ status: 500, description: 'Internal Server Error.' })
+  async update(
+    @Param('id') id: string,
+    @Body() updateProductDto: UpdateProductDto,
+  ) {
+    // Implement the update logic in the service layer
+    return await this.productService.update(id, updateProductDto);
   }
 }
