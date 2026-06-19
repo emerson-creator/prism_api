@@ -1,0 +1,43 @@
+// Products API
+
+@baseUrl = http://localhost:3000/api/v1
+@accessToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIzODRhZTFhNi1lMTJhLTQ4Y2UtOWVhZC1lOTY1ZDU2ZTEzNDkiLCJlbWFpbCI6ImFkbWluQGV4YW1wbGUuY29tIiwiaWF0IjoxNzgxOTAyNjE1LCJleHAiOjE3ODE5MDM1MTV9.POdP1w2E-bafVrXNJuxM26huIp0z4UfW9Z8QWlkMzB4
+###
+// Products: create product
+POST {{baseUrl}}/products
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "name": "TV",
+  "description": "A high-quality television for your living room.",
+  "price": 79.99,
+  "stock": 10,
+  "sku": "TV-001",
+  "categoryId": "97881fc2-85ff-4ddd-9e15-14fdbc76c5a3"
+}
+###
+// Products: get all products
+GET {{baseUrl}}/products
+###
+// Products: get product by ID
+GET {{baseUrl}}/products/941a0e87-9131-4012-93ad-275614a59191
+###
+// Products: update product
+PATCH {{baseUrl}}/products/941a0e87-9131-4012-93ad-275614a59191
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "name": "Updated TV",
+  "description": "Updated description for the high-quality television.",
+  "price": 89.99,
+  "stock": 12,
+  "sku": "TV-001",
+  "categoryId": "97881fc2-85ff-4ddd-9e15-14fdbc76c5a3"
+}
+###
+// Products: delete product
+DELETE {{baseUrl}}/products/941a0e87-9131-4012-93ad-275614a59191
+Authorization: Bearer {{accessToken}}
+
