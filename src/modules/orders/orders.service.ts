@@ -3,6 +3,7 @@ import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { OrderApiResponseDto } from './dto/order-response.dto';
 import { OrderResponseDto } from './dto/order-response.dto';
+import { NotFoundException, BadRequestException } from '@nestjs/common';
 
 @Injectable()
 export class OrdersService {
@@ -13,6 +14,24 @@ export class OrdersService {
     userId: string,
   ): Promise<OrderApiResponseDto<OrderResponseDto>> {
     const { items, shippingAddress } = createOrderDto;
+
+    for (const item of items) {
+      const product = await this.prisma.product.findUnique({
+        where: { id: item.productId },
+      });
+
+      if (!product) {
+        throw new NotFoundException(
+          `Product with ID ${item.productId} not found.`,
+        );
+      }
+
+      if (product.stock < item.quantity) {
+        throw new BadRequestException(
+          `Insufficient stock for product with ID ${item.productId}. Available stock: ${product.stock}.`,
+        );
+      }
+    }
 
     const total = items.reduce(
       (sum, item) => sum + item.price * item.quantity,
