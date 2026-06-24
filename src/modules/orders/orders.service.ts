@@ -5,11 +5,48 @@ import { OrderApiResponseDto } from './dto/order-response.dto';
 import { OrderResponseDto } from './dto/order-response.dto';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
 import { OrderStatus } from '@prisma/client';
+import { Order } from '@prisma/client';
+import { OrderItem } from '@prisma/client';
+import { User } from '@prisma/client';
+import { Product } from '@prisma/client';
+import { QueryOrderDto } from './dto/query-order.dto';
 
 @Injectable()
 export class OrdersService {
   constructor(private readonly prisma: PrismaService) {}
 
+  private formatOrderResponse(
+    order: Order & {
+      orderItems: (OrderItem & { product: Product })[];
+      user: User;
+    },
+  ): OrderResponseDto {
+    return {
+      id: order.id,
+      userId: order.userId,
+      status: order.status,
+      total: order.total.toNumber(),
+      shippingAddress: order.shippingAddress || '',
+      createdAt: order.createdAt,
+      updatedAt: order.updatedAt,
+      items: order.orderItems.map((item: any) => ({
+        id: item.id,
+        productId: item.productId,
+        productName: item.product.name,
+        quantity: item.quantity,
+        price: item.price.toNumber(),
+        subtotal: item.price.toNumber() * item.quantity,
+        createdAt: item.createdAt,
+        updatedAt: item.updatedAt,
+      })),
+      ...(order.user && {
+        userEmail: order.user.email,
+        userName: `${order.user.name} ${order.user.lastName || ''}`,
+      }),
+    };
+  }
+
+  // Create a new order for a user
   async create(
     createOrderDto: CreateOrderDto,
     userId: string,
@@ -79,7 +116,12 @@ export class OrdersService {
           },
         },
         include: {
-          orderItems: true,
+          user: true, // Pulls the user object for email/name
+          orderItems: {
+            include: {
+              product: true, //  Correctly nested! Pulls the product object for item.product.name
+            },
+          },
         },
       });
     });
@@ -92,25 +134,48 @@ export class OrdersService {
     };
   }
 
-  private formatOrderResponse(order: any): OrderResponseDto {
+  // get all orders for admin with optional filters
+  async getAllForAdmin(query: QueryOrderDto): Promise<{
+    data: OrderResponseDto[];
+    total: number;
+    page: number;
+    limit: number;
+  }> {
+    const { page = 1, limit = 10, status, search } = query;
+    const skip = (page - 1) * limit;
+
+    const where: any = {};
+    if (status) {
+      where.status = status;
+    }
+    if (search) {
+      where.OR = [
+        { userId: { contains: search, mode: 'insensitive' } },
+        { orderNumber: { contains: search, mode: 'insensitive' } },
+      ];
+    }
+    const [orders, total] = await Promise.all([
+      this.prisma.order.findMany({
+        where,
+        skip,
+        take: limit,
+        include: {
+          orderItems: {
+            include: {
+              product: true,
+            },
+          },
+          user: true,
+        },
+        orderBy: { createdAt: 'desc' },
+      }),
+      this.prisma.order.count({ where }),
+    ]);
     return {
-      id: order.id,
-      userId: order.userId,
-      status: order.status,
-      total: order.total.toNumber(),
-      shippingAddress: order.shippingAddress || '',
-      createdAt: order.createdAt,
-      updatedAt: order.updatedAt,
-      items: order.orderItems.map((item: any) => ({
-        id: item.id,
-        productId: item.productId,
-        productName: 'Product',
-        quantity: item.quantity,
-        price: item.price.toNumber(),
-        subtotal: item.price.toNumber() * item.quantity,
-        createdAt: item.createdAt,
-        updatedAt: item.updatedAt,
-      })),
+      data: orders.map((order) => this.formatOrderResponse(order)),
+      total,
+      page,
+      limit,
     };
   }
 }

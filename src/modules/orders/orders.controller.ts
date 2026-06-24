@@ -1,5 +1,5 @@
 import { Controller } from '@nestjs/common';
-import { ApiTags } from '@nestjs/swagger';
+import { ApiQuery, ApiTags } from '@nestjs/swagger';
 import { UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -10,6 +10,12 @@ import { CreateOrderDto } from './dto/create-order.dto';
 import { OrderApiResponseDto } from './dto/order-response.dto';
 import { GetUser } from '../../common/decorators/get-user.decorator';
 import { OrdersService } from './orders.service';
+import { Roles } from 'src/common/decorators/roles.decorator';
+import { Role } from '@prisma/client';
+import { Get } from '@nestjs/common';
+import { LenientThrottle } from 'src/common/decorators/custom-throttler.decorator';
+import { Query } from '@nestjs/common';
+import { QueryOrderDto } from './dto/query-order.dto';
 
 @ApiTags('Orders')
 @Controller('orders')
@@ -36,5 +42,38 @@ export class OrdersController {
     @GetUser('id') userId: string,
   ) {
     return await this.ordersService.create(createOrderDto, userId);
+  }
+
+  // Get all orders endpoint, accessible by admin users
+  // Limit, pagination, and filtering can be added here as needed
+  @Get('admin/all')
+  @Roles(Role.ADMIN) // Only admin users can access this endpoint
+  @LenientThrottle() // Apply lenient throttling to the get all orders endpoint
+  @ApiQuery({
+    name: 'page',
+    required: false,
+    description: 'Page number for pagination (default is 1)',
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    description: 'Number of orders per page for pagination (default is 10)',
+  })
+  @ApiQuery({
+    name: 'status',
+    required: false,
+    description: 'Filter orders by status (e.g., PENDING, COMPLETED)',
+  })
+  @ApiOperation({ summary: 'Get all orders (Admin only)' })
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  @ApiResponse({ status: 403, description: 'Forbidden.' })
+  @ApiResponse({ status: 500, description: 'Internal Server Error.' })
+  @ApiResponse({
+    status: 200,
+    description: 'List of all orders retrieved successfully.',
+    type: [OrderApiResponseDto],
+  })
+  async getAllOrdersAdmin(@Query() query: QueryOrderDto) {
+    return await this.ordersService.getAllForAdmin(query);
   }
 }
