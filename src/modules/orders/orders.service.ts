@@ -10,6 +10,7 @@ import { OrderItem } from '@prisma/client';
 import { User } from '@prisma/client';
 import { Product } from '@prisma/client';
 import { QueryOrderDto } from './dto/query-order.dto';
+import { PaginatedOrderResponseDto } from './dto/order-response.dto';
 
 @Injectable()
 export class OrdersService {
@@ -154,6 +155,50 @@ export class OrdersService {
         { orderNumber: { contains: search, mode: 'insensitive' } },
       ];
     }
+    const [orders, total] = await Promise.all([
+      this.prisma.order.findMany({
+        where,
+        skip,
+        take: limit,
+        include: {
+          orderItems: {
+            include: {
+              product: true,
+            },
+          },
+          user: true,
+        },
+        orderBy: { createdAt: 'desc' },
+      }),
+      this.prisma.order.count({ where }),
+    ]);
+    return {
+      data: orders.map((order) => this.formatOrderResponse(order)),
+      total,
+      page,
+      limit,
+    };
+  }
+
+  // Get user current orders
+  async getAllForUser(
+    query: QueryOrderDto,
+    userId: string,
+  ): Promise<PaginatedOrderResponseDto> {
+    const { page = 1, limit = 10, status, search } = query;
+    const skip = (page - 1) * limit;
+
+    const where: any = { userId };
+    if (status) {
+      where.status = status;
+    }
+    if (search) {
+      where.OR = [
+        { userId: { contains: search, mode: 'insensitive' } },
+        { orderNumber: { contains: search, mode: 'insensitive' } },
+      ];
+    }
+
     const [orders, total] = await Promise.all([
       this.prisma.order.findMany({
         where,

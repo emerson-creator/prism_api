@@ -74,3 +74,17 @@ export class OrderResponseDto {
   @ApiProperty({ description: 'Updated at timestamp for the order' })
   updatedAt!: Date;
 }
+
+export class PaginatedOrderResponseDto {
+  @ApiProperty({ type: [OrderResponseDto], description: 'List of orders' })
+  data!: OrderResponseDto[];
+
+  @ApiProperty({ description: 'Total number of orders available' })
+  total!: number;
+
+  @ApiProperty({ description: 'Current page number' })
+  page!: number;
+
+  @ApiProperty({ description: 'Number of orders per page' })
+  limit!: number;
+}

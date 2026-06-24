@@ -76,4 +76,41 @@ export class OrdersController {
   async getAllOrdersAdmin(@Query() query: QueryOrderDto) {
     return await this.ordersService.getAllForAdmin(query);
   }
+
+  // Get own orders endpoint, accessible by authenticated users
+  @Get('my-orders')
+  @LenientThrottle() // Apply lenient throttling to the get own orders endpoint
+  @ApiQuery({
+    name: 'page',
+    required: false,
+    description: 'Page number for pagination (default is 1)',
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    description: 'Number of orders per page for pagination (default is 10)',
+  })
+  @ApiQuery({
+    name: 'status',
+    required: false,
+    description: 'Filter orders by status (e.g., PENDING, COMPLETED)',
+  })
+  @ApiQuery({
+    name: 'search',
+    required: false,
+    description:
+      'Search for orders by user ID or order number (case-insensitive)',
+  })
+  @ApiOperation({ summary: 'Get own orders' })
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  @ApiResponse({ status: 403, description: 'Forbidden.' })
+  @ApiResponse({ status: 500, description: 'Internal Server Error.' })
+  @ApiResponse({
+    status: 200,
+    description: 'List of own orders retrieved successfully.',
+    type: [OrderApiResponseDto],
+  })
+  async findAll(@Query() query: QueryOrderDto, @GetUser('id') userId: string) {
+    return await this.ordersService.getAllForUser(query, userId);
+  }
 }
