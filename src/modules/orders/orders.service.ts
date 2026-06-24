@@ -38,13 +38,18 @@ export class OrdersService {
       0,
     );
 
+    const latestCart = await this.prisma.cart.findFirst({
+      where: { userId, checkout: false },
+      orderBy: { createdAt: 'desc' },
+    });
+
     const order = await this.prisma.order.create({
       data: {
         userId,
         totalAmount: total,
         total: total,
         shippingAddress,
-        cartId: ' ', // Placeholder for cartId, replace with actual value if needed
+        cartId: latestCart?.id || '', // Use the latest non-checkout cart ID or a placeholder
         orderItems: {
           create: items.map((item) => ({
             productId: item.productId,
