@@ -4,6 +4,7 @@ import { CreateOrderDto } from './dto/create-order.dto';
 import { OrderApiResponseDto } from './dto/order-response.dto';
 import { OrderResponseDto } from './dto/order-response.dto';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
+import { OrderStatus } from '@prisma/client';
 
 @Injectable()
 export class OrdersService {
@@ -15,54 +16,75 @@ export class OrdersService {
   ): Promise<OrderApiResponseDto<OrderResponseDto>> {
     const { items, shippingAddress } = createOrderDto;
 
-    for (const item of items) {
-      const product = await this.prisma.product.findUnique({
-        where: { id: item.productId },
+    // Wrap everything inside an interactive transaction to prevent race conditions
+    const order = await this.prisma.$transaction(async (tx) => {
+      // 1. Fetch the active cart within the transaction
+      const latestCart = await tx.cart.findFirst({
+        where: { userId, checkout: false },
+        orderBy: { createdAt: 'desc' },
       });
 
-      if (!product) {
+      if (!latestCart) {
         throw new NotFoundException(
-          `Product with ID ${item.productId} not found.`,
+          `No active cart found for user with ID ${userId}.`,
         );
       }
 
-      if (product.stock < item.quantity) {
-        throw new BadRequestException(
-          `Insufficient stock for product with ID ${item.productId}. Available stock: ${product.stock}.`,
-        );
+      // 2. Validate stock and deduct inventory sequentially using the transaction client ('tx')
+      for (const item of items) {
+        const product = await tx.product.findUnique({
+          where: { id: item.productId },
+        });
+
+        if (!product) {
+          throw new NotFoundException(
+            `Product with ID ${item.productId} not found.`,
+          );
+        }
+
+        if (product.stock < item.quantity) {
+          throw new BadRequestException(
+            `Insufficient stock for product with ID ${item.productId}. Available stock: ${product.stock}.`,
+          );
+        }
+
+        // Deduct the inventory immediately inside the transaction bubble
+        await tx.product.update({
+          where: { id: item.productId },
+          data: { stock: { decrement: item.quantity } },
+        });
       }
-    }
 
-    const total = items.reduce(
-      (sum, item) => sum + item.price * item.quantity,
-      0,
-    );
+      // 3. Calculate total amount
+      const total = items.reduce(
+        (sum, item) => sum + item.price * item.quantity,
+        0,
+      );
 
-    const latestCart = await this.prisma.cart.findFirst({
-      where: { userId, checkout: false },
-      orderBy: { createdAt: 'desc' },
-    });
-
-    const order = await this.prisma.order.create({
-      data: {
-        userId,
-        totalAmount: total,
-        total: total,
-        shippingAddress,
-        cartId: latestCart?.id || '', // Use the latest non-checkout cart ID or a placeholder
-        orderItems: {
-          create: items.map((item) => ({
-            productId: item.productId,
-            quantity: item.quantity,
-            price: item.price,
-          })),
+      // 4. Create the master order and child order items
+      return await tx.order.create({
+        data: {
+          userId,
+          totalAmount: total,
+          total,
+          status: OrderStatus.PENDING,
+          shippingAddress,
+          cartId: latestCart.id,
+          orderItems: {
+            create: items.map((item) => ({
+              productId: item.productId,
+              quantity: item.quantity,
+              price: item.price,
+            })),
+          },
         },
-      },
-      include: {
-        orderItems: true,
-      },
+        include: {
+          orderItems: true,
+        },
+      });
     });
 
+    // 5. Build and return the final clean API response structure
     return {
       success: true,
       data: this.formatOrderResponse(order),
