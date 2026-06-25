@@ -1,0 +1,87 @@
+### Variables
+@baseUrl = http://localhost:3000/api/v1
+@userToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJmYTZhNTE2MC1lZGIxLTQ1NTctOTVlYi03MzIzYTdmNDFlNDYiLCJlbWFpbCI6ImphbmUuZG9lQGV4YW1wbGUuY29tIiwiaWF0IjoxNzgyMzk4Mzk1LCJleHAiOjE3ODIzOTkyOTV9.fLwPsN0gPLn5Om-CReDvYyimmBwx9AXWCmdHtIeBa4s
+@adminToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIzODRhZTFhNi1lMTJhLTQ4Y2UtOWVhZC1lOTY1ZDU2ZTEzNDkiLCJlbWFpbCI6ImFkbWluQGV4YW1wbGUuY29tIiwiaWF0IjoxNzgyMzk5MzI3LCJleHAiOjE3ODI0MDAyMjd9.kgwWTwPgjR2Xm-PbVxRagaVxgLgzMbbVcYJ0BfpK198
+@orderId = aae6a846-35ba-4ada-ab3d-fb67f2f55226
+
+# ==========================================
+# USER ENDPOINTS (Regular Authenticated User)
+# ==========================================
+
+### 1. Create a new order
+POST {{baseUrl}}/orders
+Authorization: Bearer {{userToken}}
+Content-Type: application/json
+
+{
+  "items": [
+    {
+      "productId": "941a0e87-9131-4012-93ad-275614a59191",
+      "quantity": 2,
+      "price": 29.99
+    }
+  ],
+  "shippingAddress": "123 Main St, Tech City"
+}
+
+### (1) Anoher order 
+POST {{baseUrl}}/orders
+Authorization : Bearer {{userToken}}
+Content-Type: application/json
+
+{
+  "items": [
+    {
+      "productId": "63347f86-dd71-43db-beaf-b1d920cf082a",
+      "quantity": 1,
+      "price": 29.99
+    }
+  ],
+  "shippingAddress": "456 Elm St, Tech City"
+}
+
+### 2. Get own orders (with filtering and pagination)
+GET {{baseUrl}}/orders/my-orders
+Authorization: Bearer {{userToken}}
+
+### 3. Get own order by ID
+GET {{baseUrl}}/orders/{{orderId}}
+Authorization: Bearer {{userToken}}
+
+### 4. Update own order
+PATCH {{baseUrl}}/orders/{{orderId}}
+Authorization: Bearer {{userToken}}
+Content-Type: application/json
+
+{
+  "status": "PROCESSING"
+}
+
+
+# ==========================================
+# ADMIN ENDPOINTS
+# ==========================================
+
+### 5. Admin: Get all orders (with filtering and pagination)
+GET {{baseUrl}}/orders/admin/all
+Authorization: Bearer {{adminToken}}
+
+### 6. Admin: Get any order by ID
+GET {{baseUrl}}/orders/admin/{{orderId}}
+Authorization: Bearer {{adminToken}}
+
+### 7. Admin: Update any order
+PATCH {{baseUrl}}/orders/admin/{{orderId}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "status": "DELIVERED"
+}
+
+### 8. Admin: Cancel an order
+DELETE {{baseUrl}}/orders/admin/bd8cf946-152c-4b6e-aa15-a6ead201c0b3
+Authorization: Bearer {{adminToken}}
+
+
+/// pending bd8cf946-152c-4b6e-aa15-a6ead201c0b3

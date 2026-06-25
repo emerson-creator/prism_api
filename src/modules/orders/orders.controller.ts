@@ -208,4 +208,20 @@ export class OrdersController {
   async cancelOrderAdmin(@Param('id') id: string) {
     return await this.ordersService.cancel(id);
   }
+
+  //USER: Cancel own order
+  @Delete(':id')
+  @ModerateThrottle() // Apply moderate throttling to the cancel own order endpoint
+  @ApiOperation({ summary: 'Cancel own order' })
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  @ApiResponse({ status: 403, description: 'Forbidden.' })
+  @ApiResponse({ status: 500, description: 'Internal Server Error.' })
+  @ApiResponse({
+    status: 200,
+    description: 'Own order canceled successfully.',
+    type: OrderApiResponseDto,
+  })
+  async cancelOwnOrder(@Param('id') id: string, @GetUser('id') userId: string) {
+    return await this.ordersService.cancel(id, userId);
+  }
 }

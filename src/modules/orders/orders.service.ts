@@ -59,15 +59,9 @@ export class OrdersService {
     const order = await this.prisma.$transaction(async (tx) => {
       // 1. Fetch the active cart within the transaction
       const latestCart = await tx.cart.findFirst({
-        where: { userId, checkout: false },
+        where: { userId, checkedOut: false },
         orderBy: { createdAt: 'desc' },
       });
-
-      if (!latestCart) {
-        throw new NotFoundException(
-          `No active cart found for user with ID ${userId}.`,
-        );
-      }
 
       // 2. Validate stock and deduct inventory sequentially using the transaction client ('tx')
       for (const item of items) {
@@ -108,7 +102,7 @@ export class OrdersService {
           total,
           status: OrderStatus.PENDING,
           shippingAddress,
-          cartId: latestCart.id,
+          cartId: latestCart?.id ?? null,
           orderItems: {
             create: items.map((item) => ({
               productId: item.productId,

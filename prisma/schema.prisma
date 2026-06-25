@@ -161,8 +161,8 @@ model Order {
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  cartId    String
-  cart      Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  cartId    String?
+  cart      Cart?     @relation(fields: [cartId], references: [id], onDelete: Cascade)
 
   shippingAddress String?
 

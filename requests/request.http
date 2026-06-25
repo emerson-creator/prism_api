@@ -1,5 +1,5 @@
 @baseUrl = http://localhost:3000/api/v1
-@accessToken = Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIzODRhZTFhNi1lMTJhLTQ4Y2UtOWVhZC1lOTY1ZDU2ZTEzNDkiLCJlbWFpbCI6ImFkbWluQGV4YW1wbGUuY29tIiwiaWF0IjoxNzgxOTAyNDU5LCJleHAiOjE3ODE5MDMzNTl9.GT3vpZxA69So9U0aFxl6f_dkB97GZaKkunL37-Uh2nY
+@accessToken = Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIzODRhZTFhNi1lMTJhLTQ4Y2UtOWVhZC1lOTY1ZDU2ZTEzNDkiLCJlbWFpbCI6ImFkbWluQGV4YW1wbGUuY29tIiwiaWF0IjoxNzgyMzk2NzgzLCJleHAiOjE3ODIzOTc2ODN9.3tQ4P0HlO4uHybxrcfJky2-CZ6zczA4D2ONodmaOdFA
 
 ### Auth: register
 POST {{baseUrl}}/auth/register
