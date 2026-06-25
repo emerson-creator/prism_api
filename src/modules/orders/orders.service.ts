@@ -11,6 +11,7 @@ import { User } from '@prisma/client';
 import { Product } from '@prisma/client';
 import { QueryOrderDto } from './dto/query-order.dto';
 import { PaginatedOrderResponseDto } from './dto/order-response.dto';
+import { UpdateOrderDto } from './dto/update-order.dto';
 
 @Injectable()
 export class OrdersService {
@@ -225,7 +226,10 @@ export class OrdersService {
   }
 
   // Get order by ID for admin
-  async findOne(id: string): Promise<OrderApiResponseDto<OrderResponseDto>> {
+  async findOne(
+    id: string,
+    userId?: string,
+  ): Promise<OrderApiResponseDto<OrderResponseDto>> {
     const order = await this.prisma.order.findUnique({
       where: { id },
       include: {
@@ -242,10 +246,123 @@ export class OrdersService {
       throw new NotFoundException(`Order with ID ${id} not found.`);
     }
 
+    if (userId && order.userId !== userId) {
+      throw new NotFoundException(`Order with ID ${id} not found.`);
+    }
+
     return {
       success: true,
       data: this.formatOrderResponse(order),
       message: 'Order retrieved successfully.',
+    };
+  }
+
+  // Update order by ID for admin
+  async update(
+    id: string,
+    updateOrderDto: UpdateOrderDto,
+    userId?: string,
+  ): Promise<OrderApiResponseDto<OrderResponseDto>> {
+    const order = await this.prisma.order.findUnique({
+      where: { id },
+      include: {
+        orderItems: {
+          include: {
+            product: true,
+          },
+        },
+        user: true,
+      },
+    });
+
+    if (!order) {
+      throw new NotFoundException(`Order with ID ${id} not found.`);
+    }
+
+    if (userId && order.userId !== userId) {
+      throw new NotFoundException(`Order with ID ${id} not found.`);
+    }
+
+    const updatedOrder = await this.prisma.order.update({
+      where: { id },
+      data: {
+        ...updateOrderDto,
+      },
+      include: {
+        orderItems: {
+          include: {
+            product: true,
+          },
+        },
+        user: true,
+      },
+    });
+
+    return {
+      success: true,
+      data: this.formatOrderResponse(updatedOrder),
+      message: 'Order updated successfully.',
+    };
+  }
+
+  // Cancel order by ID for admin
+  async cancel(
+    id: string,
+    userId?: string,
+  ): Promise<OrderApiResponseDto<OrderResponseDto>> {
+    const order = await this.prisma.order.findUnique({
+      where: { id },
+      include: {
+        orderItems: {
+          include: {
+            product: true,
+          },
+        },
+        user: true,
+      },
+    });
+
+    if (!order) {
+      throw new NotFoundException(`Order with ID ${id} not found.`);
+    }
+    if (userId && order.userId !== userId) {
+      throw new NotFoundException(`Order with ID ${id} not found.`);
+    }
+
+    if (order.status !== OrderStatus.PENDING) {
+      throw new BadRequestException(`Only pending orders can be canceled.`);
+    }
+
+    const canceledOrder = await this.prisma.$transaction(async (tx) => {
+      // 1. Update the order status to CANCELED
+      const updatedOrder = await tx.order.update({
+        where: { id },
+        data: { status: OrderStatus.CANCELED },
+        include: {
+          orderItems: {
+            include: {
+              product: true,
+            },
+          },
+          user: true,
+        },
+      });
+
+      // 2. Restore the stock for each product in the order
+      for (const item of updatedOrder.orderItems) {
+        await tx.product.update({
+          where: { id: item.productId },
+          data: { stock: { increment: item.quantity } },
+        });
+      }
+
+      return updatedOrder;
+    });
+
+    return {
+      success: true,
+      data: this.formatOrderResponse(canceledOrder),
+      message: 'Order canceled successfully.',
     };
   }
 }

@@ -17,6 +17,8 @@ import { LenientThrottle } from 'src/common/decorators/custom-throttler.decorato
 import { Query } from '@nestjs/common';
 import { QueryOrderDto } from './dto/query-order.dto';
 import { Param } from '@nestjs/common';
+import { UpdateOrderDto } from './dto/update-order.dto';
+import { Patch, Delete } from '@nestjs/common';
 
 @ApiTags('Orders')
 @Controller('orders')
@@ -130,5 +132,80 @@ export class OrdersController {
   })
   async getOrderByIdAdmin(@Param('id') id: string) {
     return await this.ordersService.findOne(id);
+  }
+
+  //User: get own order by ID
+  @Get(':id')
+  @LenientThrottle() // Apply lenient throttling to the get own order by ID endpoint
+  @ApiOperation({ summary: 'Get own order by ID' })
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  @ApiResponse({ status: 403, description: 'Forbidden.' })
+  @ApiResponse({ status: 500, description: 'Internal Server Error.' })
+  @ApiResponse({
+    status: 200,
+    description: 'Own order retrieved successfully.',
+    type: OrderApiResponseDto,
+  })
+  async getOwnOrderById(
+    @Param('id') id: string,
+    @GetUser('id') userId: string,
+  ) {
+    const orderResponse = await this.ordersService.findOne(id, userId);
+    return orderResponse;
+  }
+
+  // ADMIN: update order
+  @Patch('admin/:id')
+  @Roles(Role.ADMIN) // Only admin users can access this endpoint
+  @ApiOperation({ summary: 'Update order (Admin only)' })
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  @ApiResponse({ status: 403, description: 'Forbidden.' })
+  @ApiResponse({ status: 500, description: 'Internal Server Error.' })
+  @ApiResponse({
+    status: 200,
+    description: 'Order updated successfully.',
+    type: OrderApiResponseDto,
+  })
+  async updateOrderAdmin(
+    @Param('id') id: string,
+    @Body() updateOrderDto: UpdateOrderDto,
+  ) {
+    return await this.ordersService.update(id, updateOrderDto);
+  }
+
+  // USER: update own order
+  @Patch(':id')
+  @ApiOperation({ summary: 'Update own order' })
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  @ApiResponse({ status: 403, description: 'Forbidden.' })
+  @ApiResponse({ status: 500, description: 'Internal Server Error.' })
+  @ApiResponse({
+    status: 200,
+    description: 'Own order updated successfully.',
+    type: OrderApiResponseDto,
+  })
+  async updateOwnOrder(
+    @Param('id') id: string,
+    @Body() updateOrderDto: UpdateOrderDto,
+    @GetUser('id') userId: string,
+  ) {
+    return await this.ordersService.update(id, updateOrderDto, userId);
+  }
+
+  //ADMin: Cancel order
+  @Delete('admin/:id')
+  @Roles(Role.ADMIN) // Only admin users can access this endpoint
+  @ModerateThrottle() // Apply moderate throttling to the cancel order endpoint
+  @ApiOperation({ summary: 'Cancel order (Admin only)' })
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  @ApiResponse({ status: 403, description: 'Forbidden.' })
+  @ApiResponse({ status: 500, description: 'Internal Server Error.' })
+  @ApiResponse({
+    status: 200,
+    description: 'Order canceled successfully.',
+    type: OrderApiResponseDto,
+  })
+  async cancelOrderAdmin(@Param('id') id: string) {
+    return await this.ordersService.cancel(id);
   }
 }
