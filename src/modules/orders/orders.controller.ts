@@ -16,6 +16,7 @@ import { Get } from '@nestjs/common';
 import { LenientThrottle } from 'src/common/decorators/custom-throttler.decorator';
 import { Query } from '@nestjs/common';
 import { QueryOrderDto } from './dto/query-order.dto';
+import { Param } from '@nestjs/common';
 
 @ApiTags('Orders')
 @Controller('orders')
@@ -112,5 +113,22 @@ export class OrdersController {
   })
   async findAll(@Query() query: QueryOrderDto, @GetUser('id') userId: string) {
     return await this.ordersService.getAllForUser(query, userId);
+  }
+
+  //Admin: get order by ID
+  @Get('admin/:id')
+  @Roles(Role.ADMIN) // Only admin users can access this endpoint
+  @LenientThrottle() // Apply lenient throttling to the get order by ID endpoint
+  @ApiOperation({ summary: 'Get order by ID (Admin only)' })
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  @ApiResponse({ status: 403, description: 'Forbidden.' })
+  @ApiResponse({ status: 500, description: 'Internal Server Error.' })
+  @ApiResponse({
+    status: 200,
+    description: 'Order retrieved successfully.',
+    type: OrderApiResponseDto,
+  })
+  async getOrderByIdAdmin(@Param('id') id: string) {
+    return await this.ordersService.findOne(id);
   }
 }

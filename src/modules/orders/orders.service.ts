@@ -223,4 +223,29 @@ export class OrdersService {
       limit,
     };
   }
+
+  // Get order by ID for admin
+  async findOne(id: string): Promise<OrderApiResponseDto<OrderResponseDto>> {
+    const order = await this.prisma.order.findUnique({
+      where: { id },
+      include: {
+        orderItems: {
+          include: {
+            product: true,
+          },
+        },
+        user: true,
+      },
+    });
+
+    if (!order) {
+      throw new NotFoundException(`Order with ID ${id} not found.`);
+    }
+
+    return {
+      success: true,
+      data: this.formatOrderResponse(order),
+      message: 'Order retrieved successfully.',
+    };
+  }
 }
