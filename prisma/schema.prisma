@@ -198,6 +198,7 @@ model Cart {
 model Payment {
   id        String   @id @default(uuid())
   status    PaymentStatus   @default(PENDING)
+  amount    Decimal @db.Decimal(10, 2)
   currency  String @default("USD")
   paymentMethod String?
   transactionId String?

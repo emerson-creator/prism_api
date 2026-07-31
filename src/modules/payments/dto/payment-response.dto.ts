@@ -92,6 +92,25 @@ export class PaymentApiResponseDto {
   message?: string;
   @ApiProperty({
     description: 'The payment response data',
+    type: PaymentResponseDto,
+  })
+  data!: PaymentResponseDto;
+}
+
+export class CreatePaymentIntentApiResponseDto {
+  @ApiProperty({
+    description: 'Indicates whether the payment was successful',
+    example: true,
+  })
+  success!: boolean;
+
+  @ApiProperty({
+    description: 'Message providing additional information about the payment',
+    example: 'Payment processed successfully',
+  })
+  message?: string;
+  @ApiProperty({
+    description: 'The payment response data',
     type: CreatePaymentIntentDto,
   })
   data!: CreatePaymentIntentDto;
