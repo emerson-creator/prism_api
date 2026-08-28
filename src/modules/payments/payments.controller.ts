@@ -70,4 +70,19 @@ export class PaymentsController {
   async findOne(@GetUser('id') userId: string, @Param('id') paymentId: string) {
     return await this.paymentsService.findOne(paymentId, userId);
   }
+
+  // Get payment for order id
+  @Get('order/:orderId')
+  @ApiOperation({ summary: 'Get a payment by order ID' })
+  @ApiResponse({
+    status: 200,
+    description: 'Payment details for the given order ID',
+    type: PaymentApiResponseDto,
+  })
+  async findByOrderId(
+    @GetUser('id') userId: string,
+    @Param('orderId') orderId: string,
+  ) {
+    return await this.paymentsService.findByOrderId(orderId, userId);
+  }
 }

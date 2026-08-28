@@ -223,4 +223,28 @@ export class PaymentsService {
       message: 'Payment details',
     };
   }
+
+  // Get payment for order id
+  async findByOrderId(
+    orderId: string,
+    userId: string,
+  ): Promise<{
+    success: boolean;
+    data: PaymentResponseDto;
+    message: string;
+  }> {
+    const payment = await this.prisma.payment.findFirst({
+      where: { orderId, userId },
+    });
+
+    if (!payment) {
+      throw new NotFoundException(`Payment for order ${orderId} not found`);
+    }
+
+    return {
+      success: true,
+      data: this.mapPaymentToResponseDto(payment),
+      message: 'Payment details',
+    };
+  }
 }
