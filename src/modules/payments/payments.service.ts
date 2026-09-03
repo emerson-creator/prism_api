@@ -136,8 +136,40 @@ export class PaymentsService {
       );
     }
 
-    const [updatedPayment] = await this.prisma.$transaction([
-      this.prisma.payment.update({
+    const updatedPayment = await this.prisma.$transaction(async (tx) => {
+      const order = await tx.order.findUnique({
+        where: { id: orderId },
+        include: { orderItems: true },
+      });
+
+      if (!order) {
+        throw new NotFoundException(`Order with ID ${orderId} not found`);
+      }
+
+      for (const item of order.orderItems) {
+        const product = await tx.product.findUnique({
+          where: { id: item.productId },
+        });
+
+        if (!product) {
+          throw new NotFoundException(
+            `Product with ID ${item.productId} not found.`,
+          );
+        }
+
+        if (product.stock < item.quantity) {
+          throw new BadRequestException(
+            `Insufficient stock for "${product.name}". Available: ${product.stock}.`,
+          );
+        }
+
+        await tx.product.update({
+          where: { id: item.productId },
+          data: { stock: { decrement: item.quantity } },
+        });
+      }
+
+      const updated = await tx.payment.update({
         where: { id: payment.id },
         data: {
           status: PaymentStatus.COMPLETED,
@@ -155,27 +187,22 @@ export class PaymentsService {
           createdAt: true,
           updatedAt: true,
         },
-      }),
-      this.prisma.order.update({
-        where: { id: orderId },
-        data: {
-          status: 'PROCESSING',
-        },
-      }),
-    ]);
-
-    const order = await this.prisma.order.findFirst({
-      where: { id: orderId },
-    });
-
-    if (order?.cartId) {
-      await this.prisma.cart.update({
-        where: { id: order.cartId },
-        data: {
-          checkedOut: true,
-        },
       });
-    }
+
+      await tx.order.update({
+        where: { id: orderId },
+        data: { status: 'PROCESSING' },
+      });
+
+      if (order.cartId) {
+        await tx.cart.update({
+          where: { id: order.cartId },
+          data: { checkedOut: true },
+        });
+      }
+
+      return updated;
+    });
 
     return {
       success: true,
