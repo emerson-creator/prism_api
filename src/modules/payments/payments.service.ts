@@ -55,7 +55,7 @@ export class PaymentsService {
     };
     message: string;
   }> {
-    const { orderId, amount, currency = 'usd' } = createPaymentIntentDto;
+    const { orderId, currency = 'usd' } = createPaymentIntentDto;
 
     const order = await this.prisma.order.findUnique({
       where: { id: orderId },
@@ -74,6 +74,8 @@ export class PaymentsService {
         'Payment for this order has already been completed',
       );
     }
+
+    const amount = order.totalAmount.toNumber();
 
     const paymentIntent = await this.stripe.paymentIntents.create({
       amount: Math.round(amount * 100), // Convert to cents
