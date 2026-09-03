@@ -141,40 +141,27 @@ export class PaymentsService {
     };
   }
 
-  async confirmPayment(
-    confirmPaymentDto: ConfirmPaymentDto,
-    userId: string,
-  ): Promise<{
-    success: boolean;
-    data: PaymentResponseDto;
-    message: string;
-  }> {
-    const { paymentIntentId, orderId } = confirmPaymentDto;
+  /**
+   * Lógica central: marca el pago como COMPLETED, descuenta stock,
+   * actualiza la orden y el carrito. No depende de userId —
+   * la llaman tanto confirmPayment() (flujo manual) como
+   * handleStripeWebhook() (flujo automático).
+   * Es idempotente: si el payment ya está COMPLETED, no hace nada.
+   */
+  private async finalizeSuccessfulPayment(paymentId: string, orderId: string) {
+    return this.prisma.$transaction(async (tx) => {
+      const payment = await tx.payment.findUnique({ where: { id: paymentId } });
 
-    const payment = await this.prisma.payment.findFirst({
-      where: { transactionId: paymentIntentId, orderId, userId },
-    });
+      if (!payment) {
+        throw new NotFoundException(`Payment with ID ${paymentId} not found`);
+      }
 
-    if (!payment) {
-      throw new NotFoundException(
-        `Payment with intent ID ${paymentIntentId} not found for order ${orderId}`,
-      );
-    }
+      // Idempotencia: si ya se procesó (por el flujo manual o un webhook
+      // duplicado), no repetir el descuento de stock.
+      if (payment.status === PaymentStatus.COMPLETED) {
+        return payment;
+      }
 
-    if (payment.status === PaymentStatus.COMPLETED) {
-      throw new BadRequestException('Payment has already been completed');
-    }
-
-    const paymentIntent =
-      await this.stripe.paymentIntents.retrieve(paymentIntentId);
-
-    if (paymentIntent.status !== 'succeeded') {
-      throw new BadRequestException(
-        'Payment intent is not in a succeeded state',
-      );
-    }
-
-    const updatedPayment = await this.prisma.$transaction(async (tx) => {
       const order = await tx.order.findUnique({
         where: { id: orderId },
         include: { orderItems: true },
@@ -209,10 +196,7 @@ export class PaymentsService {
 
       const updated = await tx.payment.update({
         where: { id: payment.id },
-        data: {
-          status: PaymentStatus.COMPLETED,
-          updatedAt: new Date(),
-        },
+        data: { status: PaymentStatus.COMPLETED, updatedAt: new Date() },
         select: {
           id: true,
           orderId: true,
@@ -241,12 +225,84 @@ export class PaymentsService {
 
       return updated;
     });
+  }
+
+  async confirmPayment(
+    confirmPaymentDto: ConfirmPaymentDto,
+    userId: string,
+  ): Promise<{ success: boolean; data: PaymentResponseDto; message: string }> {
+    const { paymentIntentId, orderId } = confirmPaymentDto;
+
+    const payment = await this.prisma.payment.findFirst({
+      where: { transactionId: paymentIntentId, orderId, userId },
+    });
+
+    if (!payment) {
+      throw new NotFoundException(
+        `Payment with intent ID ${paymentIntentId} not found for order ${orderId}`,
+      );
+    }
+
+    const paymentIntent =
+      await this.stripe.paymentIntents.retrieve(paymentIntentId);
+
+    if (paymentIntent.status !== 'succeeded') {
+      throw new BadRequestException(
+        'Payment intent is not in a succeeded state',
+      );
+    }
+
+    const updatedPayment = await this.finalizeSuccessfulPayment(
+      payment.id,
+      orderId,
+    );
 
     return {
       success: true,
       data: this.mapPaymentToResponseDto(updatedPayment),
       message: 'Payment confirmed successfully',
     };
+  }
+
+  /**
+   * Handle a successful payment intent.
+   * Llamado por el controller de webhook, ya con el evento validado.
+   */
+  async handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent) {
+    const payment = await this.prisma.payment.findFirst({
+      where: { transactionId: paymentIntent.id },
+    });
+
+    if (!payment) {
+      // No lo tratamos como error fatal: puede ser un intent de otra
+      // integración, o uno creado y nunca guardado por un fallo previo.
+      return;
+    }
+
+    await this.finalizeSuccessfulPayment(payment.id, payment.orderId);
+  }
+
+  async handlePaymentIntentFailed(paymentIntent: Stripe.PaymentIntent) {
+    const payment = await this.prisma.payment.findFirst({
+      where: { transactionId: paymentIntent.id },
+    });
+
+    if (!payment || payment.status === PaymentStatus.COMPLETED) {
+      return;
+    }
+
+    await this.prisma.payment.update({
+      where: { id: payment.id },
+      data: { status: PaymentStatus.FAILED },
+    });
+  }
+
+  constructWebhookEvent(rawBody: Buffer, signature: string): Stripe.Event {
+    return this.stripe.webhooks.constructEvent(
+      rawBody,
+      signature,
+      process.env.STRIPE_WEBHOOK_SECRET!,
+    );
   }
 
   async getAllPayments(userId: string): Promise<{

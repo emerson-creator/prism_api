@@ -10,6 +10,11 @@ import { ApiResponse } from '@nestjs/swagger';
 import { GetUser } from 'src/common/decorators/get-user.decorator';
 import { PaymentApiResponseDto } from './dto/payment-response.dto';
 import { ConfirmPaymentDto } from './dto/confirm-payment.dto';
+import { Req, Headers } from '@nestjs/common';
+import { Request } from 'express';
+import { BadRequestException } from '@nestjs/common';
+import type { RawBodyRequest } from '@nestjs/common';
+import type Stripe from 'stripe';
 
 @Controller('payments')
 @UseGuards(JwtAuthGuard)
@@ -84,5 +89,46 @@ export class PaymentsController {
     @Param('orderId') orderId: string,
   ) {
     return await this.paymentsService.findByOrderId(orderId, userId);
+  }
+
+  @Post('webhook')
+  // Sin @UseGuards(JwtAuthGuard) — Stripe no manda JWT.
+  // La seguridad acá es la verificación de firma, no auth de usuario.
+  async handleWebhook(
+    @Req() req: RawBodyRequest<Request>,
+    @Headers('stripe-signature') signature: string,
+  ) {
+    if (!req.rawBody) {
+      throw new BadRequestException('Missing raw body');
+    }
+
+    let event;
+    try {
+      event = this.paymentsService.constructWebhookEvent(
+        req.rawBody,
+        signature,
+      );
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      throw new BadRequestException(
+        `Webhook signature verification failed: ${message}`,
+      );
+    }
+
+    switch (event.type) {
+      case 'payment_intent.succeeded':
+        await this.paymentsService.handlePaymentIntentSucceeded(
+          event.data.object as Stripe.PaymentIntent,
+        );
+        break;
+      case 'payment_intent.payment_failed':
+        await this.paymentsService.handlePaymentIntentFailed(
+          event.data.object as Stripe.PaymentIntent,
+        );
+        break;
+      // otros eventos que te interesen: charge.refunded, etc.
+    }
+
+    return { received: true };
   }
 }

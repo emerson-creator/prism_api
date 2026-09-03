@@ -1,0 +1,68 @@
+@baseUrl = http://localhost:3000/api/v1
+@adminEmail = admin@example.com
+@adminPassword = Admin123
+@productId = 941a0e87-9131-4012-93ad-275614a59191
+@accessToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIzODRhZTFhNi1lMTJhLTQ4Y2UtOWVhZC1lOTY1ZDU2ZTEzNDkiLCJlbWFpbCI6ImFkbWluQGV4YW1wbGUuY29tIiwiaWF0IjoxNzg4NDQ2NTA0LCJleHAiOjE3ODg0NDc0MDR9.oBHGq4VZOuGOMXi_PhgC0kzUo9GGi46iu8itRJHQIUQ
+@userId = 384ae1a6-e12a-48ce-9ead-e965d56e1349
+@orderId = 3f163563-2b89-49d3-9e08-6f3656d24644
+@paymentId = aa1a198b-9cc4-4b8e-9288-3a68c5e5db7e
+
+### 0. Obtener access token
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+	"email": "{{adminEmail}}",
+	"password": "{{adminPassword}}"
+}
+
+# Copia accessToken y user.id de la respuesta y actualiza @accessToken y @userId.
+
+### 1. Crear una orden
+# Este endpoint requiere un usuario ADMIN y descuenta stock al crear la orden.
+POST {{baseUrl}}/orders/admin
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+	"userId": "{{userId}}",
+	"items": [
+		{
+			"productId": "{{productId}}",
+			"quantity": 1
+		}
+	],
+	"shippingAddress": "123 Main St, Tech City"
+}
+
+# Copia data.id de la respuesta y actualiza @orderId.
+
+### 2. Crear el PaymentIntent
+# La respuesta contiene data.clientSecret y data.paymentId.
+# El handler de abajo extrae el pi_... desde clientSecret.
+POST {{baseUrl}}/payments/create-intent
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+	"orderId": "{{orderId}}",
+	"currency": "usd"
+}
+
+# Copia data.paymentId y actualiza @paymentId.
+# Extrae paymentIntentId de data.clientSecret: es la parte anterior a "_secret".
+
+### 3. Consultar el pago creado (opcional)
+# Usa el paymentId interno guardado por la petición anterior.
+GET {{baseUrl}}/payments/{{paymentId}}
+Authorization: Bearer {{accessToken}}
+
+### 4. Simular pago exitoso desde Stripe CLI
+# `stripe trigger` crea un PaymentIntent nuevo y no permite sobrescribir su id.
+# Confirma el PaymentIntent existente usando el pi_... extraído de data.clientSecret:
+# stripe payment_intents confirm pi_TU_PAYMENT_INTENT_ID --payment-method=pm_card_visa
+
+### 5. Verificar el pago procesado por el webhook
+# Ejecuta esta petición después de que Stripe CLI muestre 200 OK.
+GET {{baseUrl}}/payments/{{paymentId}}
+Authorization: Bearer {{accessToken}}

@@ -31,6 +31,8 @@
 $ npm install
 ```
 
+Create a `.env` file and define `STRIPE_SECRET_KEY` with your Stripe secret key. The payments module requires this variable when the application starts.
+
 ## Compile and run the project
 
 ```bash
