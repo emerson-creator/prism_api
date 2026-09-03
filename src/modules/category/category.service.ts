@@ -5,6 +5,7 @@ import { CategoryResponseDto } from './dto/category-response.dto';
 import { Category, Prisma } from '@prisma/client';
 import { QueryCategoryDto } from './dto/query-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
+import { NotFoundException, BadRequestException } from '@nestjs/common';
 
 @Injectable()
 export class CategoryService {
@@ -96,7 +97,7 @@ export class CategoryService {
       include: { _count: { select: { products: true } } },
     });
     if (!category) {
-      throw new Error('Category not found');
+      throw new NotFoundException('Category not found');
     }
     return this.formatCategoryResponse(
       category,
@@ -110,7 +111,7 @@ export class CategoryService {
       include: { _count: { select: { products: true } } },
     });
     if (!category) {
-      throw new Error('Category not found');
+      throw new NotFoundException('Category not found');
     }
     return this.formatCategoryResponse(
       category,
@@ -126,7 +127,7 @@ export class CategoryService {
       where: { id },
     });
     if (!existingCategory) {
-      throw new Error('Category not found');
+      throw new NotFoundException('Category not found');
     }
     if (
       updateCategoryDto.slug &&
@@ -136,7 +137,7 @@ export class CategoryService {
         where: { slug: updateCategoryDto.slug },
       });
       if (existingSlug) {
-        throw new Error('Category slug already exists ');
+        throw new BadRequestException('Category slug already exists ');
       }
     }
     const updatedCategory = await this.prisma.category.update({
@@ -156,7 +157,7 @@ export class CategoryService {
       include: { _count: { select: { products: true } } },
     });
     if (!existingCategory) {
-      throw new Error('Category not found');
+      throw new NotFoundException('Category not found');
     }
     if ((existingCategory._count?.products ?? 0) > 0) {
       throw new Error(
