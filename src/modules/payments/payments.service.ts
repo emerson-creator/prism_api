@@ -65,20 +65,56 @@ export class PaymentsService {
       throw new NotFoundException(`Order with ID ${orderId} not found`);
     }
 
+    if (order.userId !== userId) {
+      throw new NotFoundException(`Order with ID ${orderId} not found`);
+    }
+
     const existingPayment = await this.prisma.payment.findFirst({
       where: { orderId },
     });
 
-    if (existingPayment && existingPayment.status === PaymentStatus.COMPLETED) {
-      throw new BadRequestException(
-        'Payment for this order has already been completed',
-      );
+    if (existingPayment) {
+      if (existingPayment.status === PaymentStatus.COMPLETED) {
+        throw new BadRequestException(
+          'Payment for this order has already been completed',
+        );
+      }
+
+      if (existingPayment.status === PaymentStatus.PENDING) {
+        // Ya hay un intento vigente para esta orden — reusarlo en vez de crear otro.
+        const existingIntent = await this.stripe.paymentIntents.retrieve(
+          existingPayment.transactionId!,
+        );
+
+        // Si el intent de Stripe sigue utilizable, lo devolvemos tal cual.
+        if (
+          existingIntent.status === 'requires_payment_method' ||
+          existingIntent.status === 'requires_confirmation' ||
+          existingIntent.status === 'requires_action'
+        ) {
+          return {
+            success: true,
+            data: {
+              clientSecret: existingIntent.client_secret!,
+              paymentId: existingPayment.id,
+            },
+            message: 'Payment intent already exists for this order',
+          };
+        }
+
+        // Si quedó en un estado muerto (canceled, expirado, etc.), lo marcamos
+        // como FAILED y dejamos que el flujo siga para crear uno nuevo.
+        await this.prisma.payment.update({
+          where: { id: existingPayment.id },
+          data: { status: PaymentStatus.FAILED },
+        });
+      }
     }
 
-    const amount = order.totalAmount.toNumber();
+    const amount = order.total.toNumber();
 
     const paymentIntent = await this.stripe.paymentIntents.create({
-      amount: Math.round(amount * 100), // Convert to cents
+      amount: Math.round(amount * 100),
       metadata: { orderId, userId },
       currency,
     });
