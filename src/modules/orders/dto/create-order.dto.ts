@@ -5,9 +5,9 @@ import {
   IsNotEmpty,
   IsOptional,
   IsString,
+  IsNumber,
   ValidateNested,
 } from 'class-validator';
-import { IsNumber } from 'class-validator';
 
 class OrderItemDto {
   @ApiProperty({ description: 'The ID of the product being ordered' })
@@ -20,17 +20,16 @@ class OrderItemDto {
   @IsNumber()
   quantity!: number;
 
-  @ApiProperty({ description: 'The price of the product being ordered' })
-  @IsNotEmpty()
-  @IsNumber()
-  price!: number;
+  // Sin `price`: el precio siempre se deriva de Product.price en el server
 }
 
 export class CreateOrderDto {
-  @ApiProperty({
-    type: [OrderItemDto],
-    description: 'List of items in the order',
-  })
+  @ApiProperty({ description: 'ID del usuario para el que se crea la orden' })
+  @IsNotEmpty()
+  @IsString()
+  userId!: string;
+
+  @ApiProperty({ type: [OrderItemDto] })
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => OrderItemDto)
@@ -39,5 +38,5 @@ export class CreateOrderDto {
   @ApiProperty({ required: false })
   @IsString()
   @IsOptional()
-  shippingAddress!: string;
+  shippingAddress?: string;
 }

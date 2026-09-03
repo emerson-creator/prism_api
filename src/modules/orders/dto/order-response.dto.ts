@@ -1,6 +1,7 @@
 // DTO for order response
 
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsOptional, IsString } from 'class-validator';
 
 export class OrderItemResponseDto {
   @ApiProperty({ description: 'The unique identifier of the order item' })
@@ -73,6 +74,16 @@ export class OrderResponseDto {
 
   @ApiProperty({ description: 'Updated at timestamp for the order' })
   updatedAt!: Date;
+
+  @ApiPropertyOptional({ description: 'The email of the user' })
+  @IsOptional()
+  @IsString()
+  userEmail?: string;
+
+  @ApiPropertyOptional({ description: 'The full name of the user' })
+  @IsOptional()
+  @IsString()
+  userName?: string;
 }
 
 export class PaginatedOrderResponseDto {

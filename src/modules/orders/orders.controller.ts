@@ -27,7 +27,8 @@ export class OrdersController {
   constructor(private readonly ordersService: OrdersService) {}
 
   // Create order endpoint, accessible by authenticated users
-  @Post()
+  @Post('/admin')
+  @Roles(Role.ADMIN) // Only admin users can access this endpoint
   @ModerateThrottle() // Apply moderate throttling to the create order endpoint
   @ApiOperation({ summary: 'Manage orders' })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
@@ -40,11 +41,8 @@ export class OrdersController {
     description: 'Order created successfully.',
     type: OrderApiResponseDto,
   })
-  async createOrder(
-    @Body() createOrderDto: CreateOrderDto,
-    @GetUser('id') userId: string,
-  ) {
-    return await this.ordersService.create(createOrderDto, userId);
+  async createOrder(@Body() createOrderDto: CreateOrderDto) {
+    return await this.ordersService.createForAdmin(createOrderDto);
   }
 
   // Get all orders endpoint, accessible by admin users

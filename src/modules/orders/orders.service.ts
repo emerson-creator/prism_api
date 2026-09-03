@@ -12,6 +12,7 @@ import { Product } from '@prisma/client';
 import { QueryOrderDto } from './dto/query-order.dto';
 import { PaginatedOrderResponseDto } from './dto/order-response.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class OrdersService {
@@ -48,28 +49,30 @@ export class OrdersService {
     };
   }
 
-  // Create a new order for a user
-  async create(
-    createOrderDto: CreateOrderDto,
-    userId: string,
+  async createForAdmin(
+    dto: CreateOrderDto,
   ): Promise<OrderApiResponseDto<OrderResponseDto>> {
-    const { items, shippingAddress } = createOrderDto;
+    const { userId, items, shippingAddress } = dto;
 
-    // Wrap everything inside an interactive transaction to prevent race conditions
     const order = await this.prisma.$transaction(async (tx) => {
-      // 1. Fetch the active cart within the transaction
-      const latestCart = await tx.cart.findFirst({
-        where: { userId, checkedOut: false },
-        orderBy: { createdAt: 'desc' },
-      });
+      const user = await tx.user.findUnique({ where: { id: userId } });
+      if (!user) {
+        throw new NotFoundException(`User with ID ${userId} not found.`);
+      }
 
-      // 2. Validate stock and deduct inventory sequentially using the transaction client ('tx')
+      const orderItemsData: {
+        productId: string;
+        quantity: number;
+        price: Prisma.Decimal;
+      }[] = [];
+      let total = 0;
+
       for (const item of items) {
         const product = await tx.product.findUnique({
           where: { id: item.productId },
         });
 
-        if (!product) {
+        if (!product || !product.isActive) {
           throw new NotFoundException(
             `Product with ID ${item.productId} not found.`,
           );
@@ -81,48 +84,36 @@ export class OrdersService {
           );
         }
 
-        // Deduct the inventory immediately inside the transaction bubble
         await tx.product.update({
           where: { id: item.productId },
           data: { stock: { decrement: item.quantity } },
         });
+
+        orderItemsData.push({
+          productId: item.productId,
+          quantity: item.quantity,
+          price: product.price, // ← siempre del servidor, nunca del DTO
+        });
+
+        total += Number(product.price) * item.quantity;
       }
 
-      // 3. Calculate total amount
-      const total = items.reduce(
-        (sum, item) => sum + item.price * item.quantity,
-        0,
-      );
-
-      // 4. Create the master order and child order items
-      return await tx.order.create({
+      return tx.order.create({
         data: {
           userId,
-          totalAmount: total,
           total,
+          totalAmount: total, // temporal, hasta migrar el schema
           status: OrderStatus.PENDING,
           shippingAddress,
-          cartId: latestCart?.id ?? null,
-          orderItems: {
-            create: items.map((item) => ({
-              productId: item.productId,
-              quantity: item.quantity,
-              price: item.price,
-            })),
-          },
+          orderItems: { create: orderItemsData },
         },
         include: {
-          user: true, // Pulls the user object for email/name
-          orderItems: {
-            include: {
-              product: true, //  Correctly nested! Pulls the product object for item.product.name
-            },
-          },
+          user: true,
+          orderItems: { include: { product: true } },
         },
       });
     });
 
-    // 5. Build and return the final clean API response structure
     return {
       success: true,
       data: this.formatOrderResponse(order),
