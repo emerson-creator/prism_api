@@ -24,7 +24,7 @@ export class ProductsService {
       where: { sku: createProductDto.sku },
     });
     if (existingProduct) {
-      throw new Error('SKU already exists');
+      throw new ConflictException('SKU already exists');
     }
     const product = await this.prisma.product.create({
       data: {
