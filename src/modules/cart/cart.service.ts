@@ -193,13 +193,6 @@ export class CartService {
         },
       });
 
-      for (const item of cart.cartItems) {
-        await tx.product.update({
-          where: { id: item.productId },
-          data: { stock: { decrement: item.quantity } },
-        });
-      }
-
       await tx.cart.update({
         where: { id: cart.id },
         data: { checkedOut: true },
