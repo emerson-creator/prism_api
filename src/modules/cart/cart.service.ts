@@ -7,6 +7,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { AddItemDto } from './dto/add-item.dto';
 import { UpdateItemDto } from './dto/update-item.dto';
 import { CheckoutDto } from './dto/checkout.dto';
+import { generateOrderNumber } from '../../common/utils/order-number';
 
 @Injectable()
 export class CartService {
@@ -175,6 +176,7 @@ export class CartService {
     const order = await this.prisma.$transaction(async (tx) => {
       const createdOrder = await tx.order.create({
         data: {
+          orderNumber: await generateOrderNumber(tx),
           userId,
           cartId: cart.id,
           totalAmount,

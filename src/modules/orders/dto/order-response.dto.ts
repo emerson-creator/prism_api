@@ -51,6 +51,9 @@ export class OrderResponseDto {
   @ApiProperty({ description: 'The unique identifier of the order' })
   id!: string;
 
+  @ApiProperty({ description: 'The public order number' })
+  orderNumber!: string;
+
   @ApiProperty({ description: 'The ID of the user who placed the order' })
   userId!: string;
 

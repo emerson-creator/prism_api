@@ -13,6 +13,7 @@ import { QueryOrderDto } from './dto/query-order.dto';
 import { PaginatedOrderResponseDto } from './dto/order-response.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
 import { Prisma } from '@prisma/client';
+import { generateOrderNumber } from 'src/common/utils/order-number';
 
 @Injectable()
 export class OrdersService {
@@ -26,6 +27,7 @@ export class OrdersService {
   ): OrderResponseDto {
     return {
       id: order.id,
+      orderNumber: order.orderNumber,
       userId: order.userId,
       status: order.status,
       total: order.total.toNumber(),
@@ -100,6 +102,7 @@ export class OrdersService {
 
       return tx.order.create({
         data: {
+          orderNumber: await generateOrderNumber(tx),
           userId,
           total,
           totalAmount: total, // temporal, hasta migrar el schema
