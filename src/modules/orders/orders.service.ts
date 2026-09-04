@@ -122,12 +122,9 @@ export class OrdersService {
   }
 
   // get all orders for admin with optional filters
-  async getAllForAdmin(query: QueryOrderDto): Promise<{
-    data: OrderResponseDto[];
-    total: number;
-    page: number;
-    limit: number;
-  }> {
+  async getAllForAdmin(
+    query: QueryOrderDto,
+  ): Promise<OrderApiResponseDto<PaginatedOrderResponseDto>> {
     const { page = 1, limit = 10, status, search } = query;
     const skip = (page - 1) * limit;
 
@@ -159,10 +156,14 @@ export class OrdersService {
       this.prisma.order.count({ where }),
     ]);
     return {
-      data: orders.map((order) => this.formatOrderResponse(order)),
-      total,
-      page,
-      limit,
+      success: true,
+      data: {
+        data: orders.map((order) => this.formatOrderResponse(order)),
+        total,
+        page,
+        limit,
+      },
+      message: 'Orders retrieved successfully.',
     };
   }
 
@@ -170,7 +171,7 @@ export class OrdersService {
   async getAllForUser(
     query: QueryOrderDto,
     userId: string,
-  ): Promise<PaginatedOrderResponseDto> {
+  ): Promise<OrderApiResponseDto<PaginatedOrderResponseDto>> {
     const { page = 1, limit = 10, status, search } = query;
     const skip = (page - 1) * limit;
 
@@ -203,10 +204,14 @@ export class OrdersService {
       this.prisma.order.count({ where }),
     ]);
     return {
-      data: orders.map((order) => this.formatOrderResponse(order)),
-      total,
-      page,
-      limit,
+      success: true,
+      data: {
+        data: orders.map((order) => this.formatOrderResponse(order)),
+        total,
+        page,
+        limit,
+      },
+      message: 'Orders retrieved successfully.',
     };
   }
 

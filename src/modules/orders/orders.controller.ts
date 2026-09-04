@@ -7,7 +7,10 @@ import { Body, Post } from '@nestjs/common';
 import { ModerateThrottle } from '../../common/decorators/custom-throttler.decorator';
 import { ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { CreateOrderDto } from './dto/create-order.dto';
-import { OrderApiResponseDto } from './dto/order-response.dto';
+import {
+  OrderApiResponseDto,
+  OrderResponseDto,
+} from './dto/order-response.dto';
 import { GetUser } from '../../common/decorators/get-user.decorator';
 import { OrdersService } from './orders.service';
 import { Roles } from 'src/common/decorators/roles.decorator';
@@ -19,6 +22,7 @@ import { QueryOrderDto } from './dto/query-order.dto';
 import { Param } from '@nestjs/common';
 import { UpdateOrderDto } from './dto/update-order.dto';
 import { Patch, Delete } from '@nestjs/common';
+import { PaginatedOrderResponseDto } from './dto/order-response.dto';
 
 @ApiTags('Orders')
 @Controller('orders')
@@ -41,7 +45,9 @@ export class OrdersController {
     description: 'Order created successfully.',
     type: OrderApiResponseDto,
   })
-  async createOrder(@Body() createOrderDto: CreateOrderDto) {
+  async createOrder(
+    @Body() createOrderDto: CreateOrderDto,
+  ): Promise<OrderApiResponseDto<OrderResponseDto>> {
     return await this.ordersService.createForAdmin(createOrderDto);
   }
 
@@ -72,9 +78,11 @@ export class OrdersController {
   @ApiResponse({
     status: 200,
     description: 'List of all orders retrieved successfully.',
-    type: [OrderApiResponseDto],
+    type: OrderApiResponseDto,
   })
-  async getAllOrdersAdmin(@Query() query: QueryOrderDto) {
+  async getAllOrdersAdmin(
+    @Query() query: QueryOrderDto,
+  ): Promise<OrderApiResponseDto<PaginatedOrderResponseDto>> {
     return await this.ordersService.getAllForAdmin(query);
   }
 
@@ -109,9 +117,12 @@ export class OrdersController {
   @ApiResponse({
     status: 200,
     description: 'List of own orders retrieved successfully.',
-    type: [OrderApiResponseDto],
+    type: OrderApiResponseDto,
   })
-  async findAll(@Query() query: QueryOrderDto, @GetUser('id') userId: string) {
+  async findAll(
+    @Query() query: QueryOrderDto,
+    @GetUser('id') userId: string,
+  ): Promise<OrderApiResponseDto<PaginatedOrderResponseDto>> {
     return await this.ordersService.getAllForUser(query, userId);
   }
 
@@ -128,7 +139,9 @@ export class OrdersController {
     description: 'Order retrieved successfully.',
     type: OrderApiResponseDto,
   })
-  async getOrderByIdAdmin(@Param('id') id: string) {
+  async getOrderByIdAdmin(
+    @Param('id') id: string,
+  ): Promise<OrderApiResponseDto<OrderResponseDto>> {
     return await this.ordersService.findOne(id);
   }
 
@@ -147,7 +160,7 @@ export class OrdersController {
   async getOwnOrderById(
     @Param('id') id: string,
     @GetUser('id') userId: string,
-  ) {
+  ): Promise<OrderApiResponseDto<OrderResponseDto>> {
     const orderResponse = await this.ordersService.findOne(id, userId);
     return orderResponse;
   }
@@ -167,7 +180,7 @@ export class OrdersController {
   async updateOrderAdmin(
     @Param('id') id: string,
     @Body() updateOrderDto: UpdateOrderDto,
-  ) {
+  ): Promise<OrderApiResponseDto<OrderResponseDto>> {
     return await this.ordersService.update(id, updateOrderDto);
   }
 
@@ -186,7 +199,7 @@ export class OrdersController {
     @Param('id') id: string,
     @Body() updateOrderDto: UpdateOrderDto,
     @GetUser('id') userId: string,
-  ) {
+  ): Promise<OrderApiResponseDto<OrderResponseDto>> {
     return await this.ordersService.update(id, updateOrderDto, userId);
   }
 
@@ -203,7 +216,9 @@ export class OrdersController {
     description: 'Order canceled successfully.',
     type: OrderApiResponseDto,
   })
-  async cancelOrderAdmin(@Param('id') id: string) {
+  async cancelOrderAdmin(
+    @Param('id') id: string,
+  ): Promise<OrderApiResponseDto<OrderResponseDto>> {
     return await this.ordersService.cancel(id);
   }
 
@@ -219,7 +234,10 @@ export class OrdersController {
     description: 'Own order canceled successfully.',
     type: OrderApiResponseDto,
   })
-  async cancelOwnOrder(@Param('id') id: string, @GetUser('id') userId: string) {
+  async cancelOwnOrder(
+    @Param('id') id: string,
+    @GetUser('id') userId: string,
+  ): Promise<OrderApiResponseDto<OrderResponseDto>> {
     return await this.ordersService.cancel(id, userId);
   }
 }
