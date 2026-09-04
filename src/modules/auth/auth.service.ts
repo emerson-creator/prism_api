@@ -7,6 +7,7 @@ import { randomBytes } from 'crypto';
 import { JwtService } from '@nestjs/jwt';
 import { LoginDto } from './dto/login.dto';
 import { Role } from '@prisma/client';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class AuthService {
@@ -15,6 +16,7 @@ export class AuthService {
   constructor(
     private prisma: PrismaService,
     private jwtService: JwtService,
+    private configService: ConfigService,
   ) {}
 
   private async generateTokens(
@@ -25,7 +27,13 @@ export class AuthService {
     const refreshId = randomBytes(64).toString('hex');
     const [accessToken, refreshToken] = await Promise.all([
       this.jwtService.signAsync(payload, { expiresIn: '15m' }),
-      this.jwtService.signAsync({ ...payload, refreshId }, { expiresIn: '7d' }),
+      this.jwtService.signAsync(
+        { ...payload, refreshId },
+        {
+          expiresIn: '7d',
+          secret: this.configService.getOrThrow<string>('JWT_REFRESH_SECRET'),
+        },
+      ),
     ]);
     return { accessToken, refreshToken };
   }

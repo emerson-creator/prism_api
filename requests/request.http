@@ -1,6 +1,13 @@
 @baseUrl = http://localhost:3000/api/v1
 @accessToken = Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIzODRhZTFhNi1lMTJhLTQ4Y2UtOWVhZC1lOTY1ZDU2ZTEzNDkiLCJlbWFpbCI6ImFkbWluQGV4YW1wbGUuY29tIiwiaWF0IjoxNzgyMzk2NzgzLCJleHAiOjE3ODIzOTc2ODN9.3tQ4P0HlO4uHybxrcfJky2-CZ6zczA4D2ONodmaOdFA
 
+@refreshToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI4ZDQ1Y2M2Yi1jMjQxLTRhZDctOWEyNy01MGVjNWNkZDQxNDciLCJlbWFpbCI6ImVtZXJzb24wMjMyNUBnbWFpbC5jb20iLCJyZWZyZXNoSWQiOiJkMjA4ZGM3M2Y3NWEwNGQ2ZTUzY2VkNDcwNjhlZTFiMmVjNTc3NmU0N2QxMGQzZDAzNDQyNzA0Yjk3ZGE2MmQ2YzAwNDk3YmVhMjg3ZWM1NzJhMTA5N2VhZTkyZGM5ZDdlNDE2ODY5YmI3MzY4NjM2Y2ZhYzU1YjNlNThjN2VjNSIsImlhdCI6MTc4ODUzNzMzOSwiZXhwIjoxNzg5MTQyMTM5fQ.cYY1xseRv7T2KtFac9bNHEQWzeHXXUP7VMxH16k6gT0
+
+
+## Refresh token
+POST {{baseUrl}}/auth/refresh
+Authorization: Bearer {{refreshToken}}
+
 ### Auth: register
 POST {{baseUrl}}/auth/register
 Content-Type: application/json
