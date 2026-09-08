@@ -30,11 +30,6 @@ export class UsersController {
     status: 200,
     description: 'User profile retrieved successfully.',
   })
-  @ApiOperation({ summary: 'Get current user profile' })
-  @ApiResponse({
-    status: 200,
-    description: 'User profile retrieved successfully.',
-  })
   getProfile(@Req() req: RequestWithUser): Promise<UserResponseDto> {
     return this.usersService.findOne(req.user.id);
   }
@@ -85,6 +80,31 @@ export class UsersController {
     @Body() updateData: UpdateUserDto,
   ): Promise<UserResponseDto> {
     return this.usersService.update(req.user.id, updateData);
+  }
+
+  // Admin: update ANY user by ID, including their role. Reuses the same
+  // UsersService.update() as updateProfile — only the target id differs
+  // (from the URL param instead of the authenticated user's own id).
+  @Patch(':id')
+  @Roles(Role.ADMIN)
+  @ApiOperation({ summary: 'Admin: update a user by ID (including role)' })
+  @ApiResponse({
+    status: 200,
+    description: 'User updated successfully.',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid input data.',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'User not found.',
+  })
+  async adminUpdateUser(
+    @Param('id') id: string,
+    @Body() updateData: UpdateUserDto,
+  ): Promise<UserResponseDto> {
+    return this.usersService.update(id, updateData);
   }
 
   // change current user password
