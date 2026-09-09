@@ -153,6 +153,8 @@ model Order {
   status    OrderStatus   @default(PENDING)
   totalAmount Decimal @db.Decimal(10, 2)
   total     Decimal @db.Decimal(10, 2)
+  trackingNumber String?
+  notes          String?
 
   
   createdAt DateTime @default(now())
