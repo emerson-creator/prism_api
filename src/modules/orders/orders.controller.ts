@@ -184,6 +184,25 @@ export class OrdersController {
     return await this.ordersService.update(id, updateOrderDto);
   }
 
+  // USER: confirm delivery of own order
+  @Patch(':id/confirm-delivery')
+  @ModerateThrottle()
+  @ApiOperation({ summary: 'Confirm delivery of own order' })
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  @ApiResponse({ status: 404, description: 'Order not found.' })
+  @ApiResponse({ status: 400, description: 'Order is not in SHIPPED status.' })
+  @ApiResponse({
+    status: 200,
+    description: 'Delivery confirmed successfully.',
+    type: OrderApiResponseDto,
+  })
+  async confirmOwnDelivery(
+    @Param('id') id: string,
+    @GetUser('id') userId: string,
+  ): Promise<OrderApiResponseDto<OrderResponseDto>> {
+    return await this.ordersService.confirmDelivery(id, userId);
+  }
+
   // USER: update own order
   @Patch(':id')
   @ApiOperation({ summary: 'Update own order' })

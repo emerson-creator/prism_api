@@ -7,12 +7,16 @@ import { PaymentStatus } from '@prisma/client';
 import { ConfirmPaymentDto } from './dto/confirm-payment.dto';
 import { PaymentResponseDto } from './dto/payment-response.dto';
 import { Prisma } from '@prisma/client';
+import { MailService } from '../mail/mail.service';
 
 @Injectable()
 export class PaymentsService {
   private stripe: Stripe;
 
-  constructor(private prisma: PrismaService) {
+  constructor(
+    private prisma: PrismaService,
+    private readonly mailService: MailService,
+  ) {
     this.stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
       apiVersion: '2026-07-29.dahlia',
     });
@@ -256,6 +260,15 @@ export class PaymentsService {
       payment.id,
       orderId,
     );
+
+    // Correo de confirmación — no debe romper el flujo si falla
+    const orderWithDetails = await this.prisma.order.findUnique({
+      where: { id: orderId },
+      include: { orderItems: { include: { product: true } }, user: true },
+    });
+    if (orderWithDetails) {
+      await this.mailService.sendOrderReceivedEmail(orderWithDetails);
+    }
 
     return {
       success: true,

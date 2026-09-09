@@ -14,10 +14,14 @@ import { PaginatedOrderResponseDto } from './dto/order-response.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
 import { Prisma } from '@prisma/client';
 import { generateOrderNumber } from 'src/common/utils/order-number';
+import { MailService } from '../mail/mail.service';
 
 @Injectable()
 export class OrdersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly mailService: MailService,
+  ) {}
 
   private formatOrderResponse(
     order: Order & {
@@ -276,6 +280,8 @@ export class OrdersService {
       throw new NotFoundException(`Order with ID ${id} not found.`);
     }
 
+    const previousStatus = order.status;
+
     const updatedOrder = await this.prisma.order.update({
       where: { id },
       data: {
@@ -290,6 +296,20 @@ export class OrdersService {
         user: true,
       },
     });
+
+    if (
+      previousStatus !== OrderStatus.SHIPPED &&
+      updatedOrder.status === OrderStatus.SHIPPED
+    ) {
+      await this.mailService.sendOrderShippedEmail(updatedOrder);
+    }
+
+    if (
+      previousStatus !== OrderStatus.DELIVERED &&
+      updatedOrder.status === OrderStatus.DELIVERED
+    ) {
+      await this.mailService.sendOrderDeliveredEmail(updatedOrder);
+    }
 
     return {
       success: true,
@@ -356,6 +376,46 @@ export class OrdersService {
       success: true,
       data: this.formatOrderResponse(canceledOrder),
       message: 'Order canceled successfully.',
+    };
+  }
+
+  async confirmDelivery(
+    id: string,
+    userId: string,
+  ): Promise<OrderApiResponseDto<OrderResponseDto>> {
+    const order = await this.prisma.order.findUnique({
+      where: { id },
+      include: {
+        orderItems: { include: { product: true } },
+        user: true,
+      },
+    });
+
+    if (!order || order.userId !== userId) {
+      throw new NotFoundException(`Order with ID ${id} not found.`);
+    }
+
+    if (order.status !== OrderStatus.SHIPPED) {
+      throw new BadRequestException(
+        'Only shipped orders can be confirmed as delivered.',
+      );
+    }
+
+    const updatedOrder = await this.prisma.order.update({
+      where: { id },
+      data: { status: OrderStatus.DELIVERED },
+      include: {
+        orderItems: { include: { product: true } },
+        user: true,
+      },
+    });
+
+    await this.mailService.sendOrderDeliveredEmail(updatedOrder);
+
+    return {
+      success: true,
+      data: this.formatOrderResponse(updatedOrder),
+      message: 'Delivery confirmed successfully.',
     };
   }
 }
