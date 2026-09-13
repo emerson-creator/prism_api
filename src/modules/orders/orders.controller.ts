@@ -1,11 +1,17 @@
 import { Controller } from '@nestjs/common';
-import { ApiQuery, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiParam,
+  ApiQuery,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Body, Post } from '@nestjs/common';
 import { ModerateThrottle } from '../../common/decorators/custom-throttler.decorator';
-import { ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { CreateOrderDto } from './dto/create-order.dto';
 import {
   OrderApiResponseDto,
@@ -23,25 +29,27 @@ import { Param } from '@nestjs/common';
 import { UpdateOrderDto } from './dto/update-order.dto';
 import { Patch, Delete } from '@nestjs/common';
 import { PaginatedOrderResponseDto } from './dto/order-response.dto';
+import { OrderStatus as QueryOrderStatus } from './dto/query-order.dto';
 
 @ApiTags('Orders')
+@ApiBearerAuth()
 @Controller('orders')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class OrdersController {
   constructor(private readonly ordersService: OrdersService) {}
 
-  // Create order endpoint, accessible by authenticated users
+  // Create order endpoint, accessible by administrators.
   @Post('/admin')
   @Roles(Role.ADMIN) // Only admin users can access this endpoint
   @ModerateThrottle() // Apply moderate throttling to the create order endpoint
-  @ApiOperation({ summary: 'Manage orders' })
+  @ApiOperation({ summary: 'Create an order (Admin only)' })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
   @ApiResponse({ status: 403, description: 'Forbidden.' })
   @ApiResponse({ status: 500, description: 'Internal Server Error.' })
-  @ApiResponse({ status: 201, description: 'Order created successfully.' })
+  @ApiResponse({ status: 404, description: 'User or product not found.' })
   @ApiResponse({ status: 400, description: 'Bad Request.' })
   @ApiResponse({
-    status: 200,
+    status: 201,
     description: 'Order created successfully.',
     type: OrderApiResponseDto,
   })
@@ -69,7 +77,8 @@ export class OrdersController {
   @ApiQuery({
     name: 'status',
     required: false,
-    description: 'Filter orders by status (e.g., PENDING, COMPLETED)',
+    enum: QueryOrderStatus,
+    description: 'Filter orders by status',
   })
   @ApiOperation({ summary: 'Get all orders (Admin only)' })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
@@ -102,7 +111,8 @@ export class OrdersController {
   @ApiQuery({
     name: 'status',
     required: false,
-    description: 'Filter orders by status (e.g., PENDING, COMPLETED)',
+    enum: QueryOrderStatus,
+    description: 'Filter orders by status',
   })
   @ApiQuery({
     name: 'search',
@@ -131,6 +141,7 @@ export class OrdersController {
   @Roles(Role.ADMIN) // Only admin users can access this endpoint
   @LenientThrottle() // Apply lenient throttling to the get order by ID endpoint
   @ApiOperation({ summary: 'Get order by ID (Admin only)' })
+  @ApiParam({ name: 'id', description: 'Order ID' })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
   @ApiResponse({ status: 403, description: 'Forbidden.' })
   @ApiResponse({ status: 500, description: 'Internal Server Error.' })
@@ -149,6 +160,7 @@ export class OrdersController {
   @Get(':id')
   @LenientThrottle() // Apply lenient throttling to the get own order by ID endpoint
   @ApiOperation({ summary: 'Get own order by ID' })
+  @ApiParam({ name: 'id', description: 'Order ID' })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
   @ApiResponse({ status: 403, description: 'Forbidden.' })
   @ApiResponse({ status: 500, description: 'Internal Server Error.' })
@@ -169,6 +181,7 @@ export class OrdersController {
   @Patch('admin/:id')
   @Roles(Role.ADMIN) // Only admin users can access this endpoint
   @ApiOperation({ summary: 'Update order (Admin only)' })
+  @ApiParam({ name: 'id', description: 'Order ID' })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
   @ApiResponse({ status: 403, description: 'Forbidden.' })
   @ApiResponse({ status: 500, description: 'Internal Server Error.' })
@@ -188,6 +201,7 @@ export class OrdersController {
   @Patch(':id/confirm-delivery')
   @ModerateThrottle()
   @ApiOperation({ summary: 'Confirm delivery of own order' })
+  @ApiParam({ name: 'id', description: 'Order ID' })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
   @ApiResponse({ status: 404, description: 'Order not found.' })
   @ApiResponse({ status: 400, description: 'Order is not in SHIPPED status.' })
@@ -206,6 +220,7 @@ export class OrdersController {
   // USER: update own order
   @Patch(':id')
   @ApiOperation({ summary: 'Update own order' })
+  @ApiParam({ name: 'id', description: 'Order ID' })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
   @ApiResponse({ status: 403, description: 'Forbidden.' })
   @ApiResponse({ status: 500, description: 'Internal Server Error.' })
@@ -227,6 +242,7 @@ export class OrdersController {
   @Roles(Role.ADMIN) // Only admin users can access this endpoint
   @ModerateThrottle() // Apply moderate throttling to the cancel order endpoint
   @ApiOperation({ summary: 'Cancel order (Admin only)' })
+  @ApiParam({ name: 'id', description: 'Order ID' })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
   @ApiResponse({ status: 403, description: 'Forbidden.' })
   @ApiResponse({ status: 500, description: 'Internal Server Error.' })
@@ -245,6 +261,7 @@ export class OrdersController {
   @Delete(':id')
   @ModerateThrottle() // Apply moderate throttling to the cancel own order endpoint
   @ApiOperation({ summary: 'Cancel own order' })
+  @ApiParam({ name: 'id', description: 'Order ID' })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
   @ApiResponse({ status: 403, description: 'Forbidden.' })
   @ApiResponse({ status: 500, description: 'Internal Server Error.' })
