@@ -10,6 +10,7 @@ export class ConfirmPaymentDto {
   @IsNotEmpty()
   paymentIntentId!: string;
 
+  @ApiProperty({ description: 'Order ID associated with the payment' })
   @IsNotEmpty()
   @IsString()
   orderId!: string;

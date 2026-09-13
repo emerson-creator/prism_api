@@ -1,20 +1,22 @@
 import { Controller, Post, Get } from '@nestjs/common';
 import { UseGuards } from '@nestjs/common';
-import { ApiOperation, ApiTags } from '@nestjs/swagger';
-import { ApiBearerAuth } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiParam,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { PaymentsService } from './payments.service';
 import { CreatePaymentIntentDto } from './dto/create-payment-intent.dto';
 import { Body, Param } from '@nestjs/common';
-import { ApiResponse } from '@nestjs/swagger';
 import { GetUser } from 'src/common/decorators/get-user.decorator';
-import { PaymentApiResponseDto } from './dto/payment-response.dto';
+import {
+  CreatePaymentIntentApiResponseDto,
+  PaymentApiResponseDto,
+} from './dto/payment-response.dto';
 import { ConfirmPaymentDto } from './dto/confirm-payment.dto';
-import { Req, Headers } from '@nestjs/common';
-import { Request } from 'express';
-import { BadRequestException } from '@nestjs/common';
-import type { RawBodyRequest } from '@nestjs/common';
-import type Stripe from 'stripe';
 
 @Controller('payments')
 @UseGuards(JwtAuthGuard)
@@ -25,10 +27,13 @@ export class PaymentsController {
 
   @Post('create-intent')
   @ApiOperation({ summary: 'Create a payment intent' })
+  @ApiResponse({ status: 400, description: 'The order cannot be paid.' })
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  @ApiResponse({ status: 404, description: 'Order not found.' })
   @ApiResponse({
     status: 201,
     description: 'Payment intent created successfully',
-    type: PaymentApiResponseDto,
+    type: CreatePaymentIntentApiResponseDto,
   })
   async createPaymentIntent(
     @Body() createPaymentIntentDto: CreatePaymentIntentDto,
@@ -42,6 +47,9 @@ export class PaymentsController {
 
   @Post('confirm')
   @ApiOperation({ summary: 'Confirm a payment intent' })
+  @ApiResponse({ status: 400, description: 'Payment confirmation failed.' })
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  @ApiResponse({ status: 404, description: 'Payment or order not found.' })
   @ApiResponse({
     status: 200,
     description: 'Payment intent confirmed successfully',
@@ -56,6 +64,7 @@ export class PaymentsController {
 
   @Get()
   @ApiOperation({ summary: 'Get all payments' })
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
   @ApiResponse({
     status: 200,
     description: 'List of all payments',
@@ -67,6 +76,9 @@ export class PaymentsController {
 
   @Get(':id')
   @ApiOperation({ summary: 'Get a payment by ID' })
+  @ApiParam({ name: 'id', description: 'Payment ID' })
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  @ApiResponse({ status: 404, description: 'Payment not found.' })
   @ApiResponse({
     status: 200,
     description: 'Payment details',
@@ -79,6 +91,9 @@ export class PaymentsController {
   // Get payment for order id
   @Get('order/:orderId')
   @ApiOperation({ summary: 'Get a payment by order ID' })
+  @ApiParam({ name: 'orderId', description: 'Order ID' })
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  @ApiResponse({ status: 404, description: 'Payment not found.' })
   @ApiResponse({
     status: 200,
     description: 'Payment details for the given order ID',
@@ -91,44 +106,4 @@ export class PaymentsController {
     return await this.paymentsService.findByOrderId(orderId, userId);
   }
 
-  @Post('webhook')
-  // Sin @UseGuards(JwtAuthGuard) — Stripe no manda JWT.
-  // La seguridad acá es la verificación de firma, no auth de usuario.
-  async handleWebhook(
-    @Req() req: RawBodyRequest<Request>,
-    @Headers('stripe-signature') signature: string,
-  ) {
-    if (!req.rawBody) {
-      throw new BadRequestException('Missing raw body');
-    }
-
-    let event;
-    try {
-      event = this.paymentsService.constructWebhookEvent(
-        req.rawBody,
-        signature,
-      );
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      throw new BadRequestException(
-        `Webhook signature verification failed: ${message}`,
-      );
-    }
-
-    switch (event.type) {
-      case 'payment_intent.succeeded':
-        await this.paymentsService.handlePaymentIntentSucceeded(
-          event.data.object as Stripe.PaymentIntent,
-        );
-        break;
-      case 'payment_intent.payment_failed':
-        await this.paymentsService.handlePaymentIntentFailed(
-          event.data.object as Stripe.PaymentIntent,
-        );
-        break;
-      // otros eventos que te interesen: charge.refunded, etc.
-    }
-
-    return { received: true };
-  }
 }

@@ -151,9 +151,14 @@ export class PaymentsService {
    * la llaman tanto confirmPayment() (flujo manual) como
    * handleStripeWebhook() (flujo automático).
    * Es idempotente: si el payment ya está COMPLETED, no hace nada.
+   *
+   * El correo de "order received" vive AQUÍ (no en confirmPayment)
+   * precisamente para cubrir ambos caminos — un pago confirmado solo
+   * vía webhook (sin que el usuario pase por el flujo manual del
+   * front) también debe disparar el correo.
    */
   private async finalizeSuccessfulPayment(paymentId: string, orderId: string) {
-    return this.prisma.$transaction(async (tx) => {
+    const result = await this.prisma.$transaction(async (tx) => {
       const payment = await tx.payment.findUnique({ where: { id: paymentId } });
 
       if (!payment) {
@@ -161,9 +166,9 @@ export class PaymentsService {
       }
 
       // Idempotencia: si ya se procesó (por el flujo manual o un webhook
-      // duplicado), no repetir el descuento de stock.
+      // duplicado), no repetir el descuento de stock ni el correo.
       if (payment.status === PaymentStatus.COMPLETED) {
-        return payment;
+        return { payment, alreadyCompleted: true as const };
       }
 
       const order = await tx.order.findUnique({
@@ -227,8 +232,23 @@ export class PaymentsService {
         });
       }
 
-      return updated;
+      return { payment: updated, alreadyCompleted: false as const };
     });
+
+    // Email is sent outside the transaction (network I/O shouldn't hold
+    // a DB lock), and only on the first time this payment actually
+    // completes — idempotent, same as the stock decrement above.
+    if (!result.alreadyCompleted) {
+      const orderWithDetails = await this.prisma.order.findUnique({
+        where: { id: orderId },
+        include: { orderItems: { include: { product: true } }, user: true },
+      });
+      if (orderWithDetails) {
+        await this.mailService.sendOrderReceivedEmail(orderWithDetails);
+      }
+    }
+
+    return result.payment;
   }
 
   async confirmPayment(
@@ -260,15 +280,6 @@ export class PaymentsService {
       payment.id,
       orderId,
     );
-
-    // Correo de confirmación — no debe romper el flujo si falla
-    const orderWithDetails = await this.prisma.order.findUnique({
-      where: { id: orderId },
-      include: { orderItems: { include: { product: true } }, user: true },
-    });
-    if (orderWithDetails) {
-      await this.mailService.sendOrderReceivedEmail(orderWithDetails);
-    }
 
     return {
       success: true,
@@ -358,7 +369,9 @@ export class PaymentsService {
     };
   }
 
-  // Get payment for order id
+  /**
+   * Get payment for order id
+   */
   async findByOrderId(
     orderId: string,
     userId: string,

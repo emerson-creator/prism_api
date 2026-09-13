@@ -11,13 +11,28 @@ import type { RawBodyRequest } from '@nestjs/common';
 import type { Request } from 'express';
 import type Stripe from 'stripe';
 import { PaymentsService } from './payments.service';
+import {
+  ApiHeader,
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 
 @Controller('payments')
 @SkipThrottle() // Stripe puede reintentar eventos en ráfaga; no lo limitamos.
+@ApiTags('Payments')
 export class PaymentsWebhookController {
   constructor(private readonly paymentsService: PaymentsService) {}
 
   @Post('webhook')
+  @ApiOperation({ summary: 'Receive Stripe payment events' })
+  @ApiHeader({
+    name: 'stripe-signature',
+    required: true,
+    description: 'Stripe signature used to verify the raw request body',
+  })
+  @ApiResponse({ status: 200, description: 'Webhook event received.' })
+  @ApiResponse({ status: 400, description: 'Invalid or missing Stripe signature.' })
   // Sin JwtAuthGuard a propósito: Stripe no manda JWT.
   // La seguridad acá es la verificación de firma (constructWebhookEvent).
   async handleWebhook(

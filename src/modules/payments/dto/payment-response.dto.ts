@@ -15,8 +15,8 @@ export class PaymentResponseDto {
   orderId!: string;
 
   @ApiProperty({
-    description: 'The amount of the payment in cents',
-    example: 5000,
+    description: 'The payment amount in the order currency',
+    example: 50,
   })
   amount!: number;
 
@@ -78,6 +78,14 @@ export class CreatePaymentIntentDto {
   paymentId!: string;
 }
 
+export class CreatePaymentIntentResponseDto {
+  @ApiProperty({ description: 'Stripe client secret used by the frontend' })
+  clientSecret!: string;
+
+  @ApiProperty({ description: 'Internal payment ID' })
+  paymentId!: string;
+}
+
 export class PaymentApiResponseDto {
   @ApiProperty({
     description: 'Indicates whether the payment was successful',
@@ -111,7 +119,7 @@ export class CreatePaymentIntentApiResponseDto {
   message?: string;
   @ApiProperty({
     description: 'The payment response data',
-    type: CreatePaymentIntentDto,
+    type: CreatePaymentIntentResponseDto,
   })
   data!: CreatePaymentIntentDto;
 }
