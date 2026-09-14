@@ -9,6 +9,9 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { RolesGuard } from '../../common/guards/roles.guard';
+import { Roles } from '../../common/decorators/roles.decorator';
+import { Role } from '@prisma/client';
 import { PaymentsService } from './payments.service';
 import { CreatePaymentIntentDto } from './dto/create-payment-intent.dto';
 import { Body, Param } from '@nestjs/common';
@@ -63,6 +66,34 @@ export class PaymentsController {
     @GetUser('id') userId: string,
   ) {
     return await this.paymentsService.confirmPayment(confirmPaymentDto, userId);
+  }
+
+  // Admin-only: refunds a paid order via Stripe. Only orders currently
+  // in PROCESSING or SHIPPED can be refunded — enforced in the service.
+  @Post('order/:orderId/refund')
+  @UseGuards(RolesGuard)
+  @Roles(Role.ADMIN)
+  @ApiOperation({ summary: 'Refund a completed payment (admin only)' })
+  @ApiParam({ name: 'orderId', description: 'Order ID' })
+  @ApiResponse({
+    status: 400,
+    description: 'Payment cannot be refunded in its current state.',
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  @ApiResponse({ status: 403, description: 'Forbidden.' })
+  @ApiResponse({ status: 404, description: 'Payment or order not found.' })
+  @ApiResponse({
+    status: 200,
+    description: 'Payment refunded successfully',
+    type: PaymentApiResponseDto,
+  })
+  async refundPayment(@Param('orderId') orderId: string) {
+    const data = await this.paymentsService.refundPayment(orderId);
+    return {
+      success: true,
+      data,
+      message: 'Payment refunded successfully',
+    };
   }
 
   @Get()

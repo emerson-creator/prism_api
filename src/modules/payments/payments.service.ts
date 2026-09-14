@@ -3,7 +3,7 @@ import Stripe from 'stripe';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreatePaymentIntentDto } from './dto/create-payment-intent.dto';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
-import { PaymentStatus } from '@prisma/client';
+import { OrderStatus, PaymentStatus } from '@prisma/client';
 import { ConfirmPaymentDto } from './dto/confirm-payment.dto';
 import { PaymentResponseDto } from './dto/payment-response.dto';
 import { Prisma } from '@prisma/client';
@@ -85,12 +85,10 @@ export class PaymentsService {
       }
 
       if (existingPayment.status === PaymentStatus.PENDING) {
-        // Ya hay un intento vigente para esta orden — reusarlo en vez de crear otro.
         const existingIntent = await this.stripe.paymentIntents.retrieve(
           existingPayment.transactionId!,
         );
 
-        // Si el intent de Stripe sigue utilizable, lo devolvemos tal cual.
         if (
           existingIntent.status === 'requires_payment_method' ||
           existingIntent.status === 'requires_confirmation' ||
@@ -106,8 +104,6 @@ export class PaymentsService {
           };
         }
 
-        // Si quedó en un estado muerto (canceled, expirado, etc.), lo marcamos
-        // como FAILED y dejamos que el flujo siga para crear uno nuevo.
         await this.prisma.payment.update({
           where: { id: existingPayment.id },
           data: { status: PaymentStatus.FAILED },
@@ -154,8 +150,7 @@ export class PaymentsService {
    *
    * El correo de "order received" vive AQUÍ (no en confirmPayment)
    * precisamente para cubrir ambos caminos — un pago confirmado solo
-   * vía webhook (sin que el usuario pase por el flujo manual del
-   * front) también debe disparar el correo.
+   * vía webhook también debe disparar el correo.
    */
   private async finalizeSuccessfulPayment(paymentId: string, orderId: string) {
     const result = await this.prisma.$transaction(async (tx) => {
@@ -165,8 +160,6 @@ export class PaymentsService {
         throw new NotFoundException(`Payment with ID ${paymentId} not found`);
       }
 
-      // Idempotencia: si ya se procesó (por el flujo manual o un webhook
-      // duplicado), no repetir el descuento de stock ni el correo.
       if (payment.status === PaymentStatus.COMPLETED) {
         return { payment, alreadyCompleted: true as const };
       }
@@ -235,9 +228,6 @@ export class PaymentsService {
       return { payment: updated, alreadyCompleted: false as const };
     });
 
-    // Email is sent outside the transaction (network I/O shouldn't hold
-    // a DB lock), and only on the first time this payment actually
-    // completes — idempotent, same as the stock decrement above.
     if (!result.alreadyCompleted) {
       const orderWithDetails = await this.prisma.order.findUnique({
         where: { id: orderId },
@@ -298,8 +288,6 @@ export class PaymentsService {
     });
 
     if (!payment) {
-      // No lo tratamos como error fatal: puede ser un intent de otra
-      // integración, o uno creado y nunca guardado por un fallo previo.
       return;
     }
 
@@ -319,6 +307,143 @@ export class PaymentsService {
       where: { id: payment.id },
       data: { status: PaymentStatus.FAILED },
     });
+  }
+
+  /**
+   * Admin-only: refunds a COMPLETED payment via Stripe, then — only if
+   * Stripe confirms the refund — restores stock and cancels the order.
+   * The network call to Stripe happens BEFORE the DB transaction, so we
+   * never hold a Prisma transaction open across an HTTP round-trip.
+   *
+   * Idempotent: if the payment is already REFUNDED, returns early
+   * without calling Stripe again or double-restoring stock.
+   */
+  async refundPayment(orderId: string) {
+    const payment = await this.prisma.payment.findFirst({
+      where: { orderId },
+    });
+
+    if (!payment) {
+      throw new NotFoundException(`No payment found for order ${orderId}`);
+    }
+
+    if (payment.status === PaymentStatus.REFUNDED) {
+      return this.mapPaymentToResponseDto(payment);
+    }
+
+    if (payment.status !== PaymentStatus.COMPLETED) {
+      throw new BadRequestException(
+        `Only completed payments can be refunded (current status: ${payment.status}).`,
+      );
+    }
+
+    const order = await this.prisma.order.findUnique({
+      where: { id: orderId },
+      include: { orderItems: true },
+    });
+
+    if (!order) {
+      throw new NotFoundException(`Order with ID ${orderId} not found`);
+    }
+
+    if (
+      !(
+        [OrderStatus.PROCESSING, OrderStatus.SHIPPED] as OrderStatus[]
+      ).includes(order.status)
+    ) {
+      throw new BadRequestException(
+        `Only orders in PROCESSING or SHIPPED can be refunded (current status: ${order.status}).`,
+      );
+    }
+
+    if (!payment.transactionId) {
+      throw new BadRequestException(
+        'Payment has no associated Stripe transaction.',
+      );
+    }
+
+    await this.stripe.refunds.create({
+      payment_intent: payment.transactionId,
+    });
+
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const updatedPayment = await tx.payment.update({
+        where: { id: payment.id },
+        data: { status: PaymentStatus.REFUNDED },
+      });
+
+      const updatedOrder = await tx.order.update({
+        where: { id: orderId },
+        data: { status: OrderStatus.CANCELED },
+        include: { orderItems: { include: { product: true } }, user: true },
+      });
+
+      for (const item of order.orderItems) {
+        await tx.product.update({
+          where: { id: item.productId },
+          data: { stock: { increment: item.quantity } },
+        });
+      }
+
+      return { payment: updatedPayment, order: updatedOrder };
+    });
+
+    await this.mailService.sendOrderRefundedEmail(updated.order);
+
+    return this.mapPaymentToResponseDto(updated.payment);
+  }
+
+  /**
+   * Webhook counterpart to refundPayment(): confirms a refund initiated
+   * via Stripe (dashboard, CLI, or our own refundPayment call) actually
+   * settled. Idempotent for the same reason as handlePaymentIntentSucceeded.
+   */
+  async handleChargeRefunded(charge: Stripe.Charge) {
+    const paymentIntentId =
+      typeof charge.payment_intent === 'string'
+        ? charge.payment_intent
+        : charge.payment_intent?.id;
+
+    if (!paymentIntentId) return;
+
+    const payment = await this.prisma.payment.findFirst({
+      where: { transactionId: paymentIntentId },
+    });
+
+    if (!payment || payment.status === PaymentStatus.REFUNDED) {
+      return;
+    }
+
+    const order = await this.prisma.order.findUnique({
+      where: { id: payment.orderId },
+      include: { orderItems: true },
+    });
+
+    if (!order) return;
+
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const updatedPayment = await tx.payment.update({
+        where: { id: payment.id },
+        data: { status: PaymentStatus.REFUNDED },
+      });
+
+      const updatedOrder = await tx.order.update({
+        where: { id: order.id },
+        data: { status: OrderStatus.CANCELED },
+        include: { orderItems: { include: { product: true } }, user: true },
+      });
+
+      for (const item of order.orderItems) {
+        await tx.product.update({
+          where: { id: item.productId },
+          data: { stock: { increment: item.quantity } },
+        });
+      }
+
+      return { payment: updatedPayment, order: updatedOrder };
+    });
+
+    await this.mailService.sendOrderRefundedEmail(updated.order);
   }
 
   constructWebhookEvent(rawBody: Buffer, signature: string): Stripe.Event {
@@ -369,9 +494,7 @@ export class PaymentsService {
     };
   }
 
-  /**
-   * Get payment for order id
-   */
+  // Get payment for order id
   async findByOrderId(
     orderId: string,
     userId: string,
