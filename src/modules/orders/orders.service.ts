@@ -418,4 +418,30 @@ export class OrdersService {
       message: 'Delivery confirmed successfully.',
     };
   }
+
+  /**
+   * Auto-cancels PENDING orders older than `olderThanHours` that were
+   * never paid. Safe to run unattended: cancelling from PENDING never
+   * touches money (nothing was charged yet) or stock (nothing was
+   * decremented yet) — confirmed by cancel()'s own logic, which only
+   * flips the status field for PENDING orders.
+   *
+   * Returns the count of orders cancelled, for logging by the caller.
+   */
+  async cancelStalePendingOrders(olderThanHours = 24): Promise<number> {
+    const cutoff = new Date();
+    cutoff.setHours(cutoff.getHours() - olderThanHours);
+
+    const result = await this.prisma.order.updateMany({
+      where: {
+        status: OrderStatus.PENDING,
+        createdAt: { lt: cutoff },
+      },
+      data: {
+        status: OrderStatus.CANCELED,
+      },
+    });
+
+    return result.count;
+  }
 }
