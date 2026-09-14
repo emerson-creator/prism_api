@@ -42,6 +42,14 @@ export class MailService {
     );
   }
 
+  async sendOrderRefundedEmail(order: OrderWithDetails) {
+    await this.send(
+      order.user.email,
+      `Your order #${order.orderNumber} has been refunded`,
+      this.orderRefundedTemplate(order),
+    );
+  }
+
   // We never let an email failure break the business flow (payment/order already saved successfully)
   private async send(to: string, subject: string, html: string) {
     try {
@@ -118,6 +126,13 @@ export class MailService {
     return this.baseTemplate(
       'Thank you for your purchase! 🎉',
       `<p style="font-size:14px;color:#0a0a0a;">We confirm the delivery of your order <strong>#${order.orderNumber}</strong>. We hope you enjoy it.</p>`,
+    );
+  }
+
+  private orderRefundedTemplate(order: OrderWithDetails): string {
+    return this.baseTemplate(
+      'Your order has been refunded',
+      `<p style="font-size:14px;color:#0a0a0a;">We confirm the refund of your order <strong>#${order.orderNumber}</strong>. The amount will be credited back to your original payment method.</p>`,
     );
   }
 }
