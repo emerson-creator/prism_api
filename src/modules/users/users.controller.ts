@@ -1,5 +1,15 @@
 import { Controller } from '@nestjs/common';
-import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiBody,
+  ApiForbiddenResponse,
+  ApiNotFoundResponse,
+  ApiOperation,
+  ApiParam,
+  ApiResponse,
+  ApiTags,
+  ApiUnauthorizedResponse,
+} from '@nestjs/swagger';
 import { UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
 import { RolesGuard } from 'src/common/guards/roles.guard';
@@ -20,6 +30,7 @@ import { Delete } from '@nestjs/common';
 @ApiTags('Users')
 @Controller('users')
 @UseGuards(JwtAuthGuard, RolesGuard)
+@ApiBearerAuth('accessToken')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
@@ -29,6 +40,10 @@ export class UsersController {
   @ApiResponse({
     status: 200,
     description: 'User profile retrieved successfully.',
+    type: UserResponseDto,
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Access token is missing or invalid.',
   })
   getProfile(@Req() req: RequestWithUser): Promise<UserResponseDto> {
     return this.usersService.findOne(req.user.id);
@@ -41,7 +56,13 @@ export class UsersController {
   @ApiResponse({
     status: 200,
     description: 'Users retrieved successfully.',
+    type: UserResponseDto,
+    isArray: true,
   })
+  @ApiUnauthorizedResponse({
+    description: 'Access token is missing or invalid.',
+  })
+  @ApiForbiddenResponse({ description: 'Administrator access is required.' })
   async getAllUsers(): Promise<UserResponseDto[]> {
     const users = await this.usersService.getAllUsers();
     return users;
@@ -54,11 +75,14 @@ export class UsersController {
   @ApiResponse({
     status: 200,
     description: 'User retrieved successfully.',
+    type: UserResponseDto,
   })
-  @ApiResponse({
-    status: 404,
-    description: 'User not found.',
+  @ApiParam({ name: 'id', description: 'User ID' })
+  @ApiNotFoundResponse({ description: 'User not found.' })
+  @ApiUnauthorizedResponse({
+    description: 'Access token is missing or invalid.',
   })
+  @ApiForbiddenResponse({ description: 'Administrator access is required.' })
   async getUserById(@Param('id') id: string): Promise<UserResponseDto> {
     const user = await this.usersService.findOne(id);
     return user;
@@ -70,7 +94,9 @@ export class UsersController {
   @ApiResponse({
     status: 200,
     description: 'User profile updated successfully.',
+    type: UserResponseDto,
   })
+  @ApiBody({ type: UpdateUserDto })
   @ApiResponse({
     status: 400,
     description: 'Invalid input data.',
@@ -91,7 +117,10 @@ export class UsersController {
   @ApiResponse({
     status: 200,
     description: 'User updated successfully.',
+    type: UserResponseDto,
   })
+  @ApiParam({ name: 'id', description: 'User ID' })
+  @ApiBody({ type: UpdateUserDto })
   @ApiResponse({
     status: 400,
     description: 'Invalid input data.',
@@ -114,6 +143,10 @@ export class UsersController {
     status: 200,
     description: 'Password changed successfully.',
   })
+  @ApiBody({ type: ChangePasswordDto })
+  @ApiUnauthorizedResponse({
+    description: 'Access token is missing or invalid.',
+  })
   @ApiResponse({
     status: 400,
     description: 'Invalid input data.',
@@ -133,6 +166,9 @@ export class UsersController {
     status: 200,
     description: 'User account deleted successfully.',
   })
+  @ApiUnauthorizedResponse({
+    description: 'Access token is missing or invalid.',
+  })
   @ApiResponse({
     status: 400,
     description: 'Invalid input data.',
@@ -150,10 +186,12 @@ export class UsersController {
     status: 200,
     description: 'User account deleted successfully.',
   })
-  @ApiResponse({
-    status: 404,
-    description: 'User not found.',
+  @ApiParam({ name: 'id', description: 'User ID' })
+  @ApiNotFoundResponse({ description: 'User not found.' })
+  @ApiUnauthorizedResponse({
+    description: 'Access token is missing or invalid.',
   })
+  @ApiForbiddenResponse({ description: 'Administrator access is required.' })
   async adminDeleteUser(@Param('id') id: string): Promise<{ message: string }> {
     await this.usersService.delete(id);
     return { message: 'User account deleted successfully.' };
