@@ -38,7 +38,7 @@ export class AuthController {
   @HttpCode(200)
   @UseGuards(RefreshTokenGuard)
   @ApiOperation({ summary: 'Refresh access token using refresh token' })
-  @ApiBearerAuth()
+  @ApiBearerAuth('refreshToken')
   @ApiOkResponse({
     description: 'Access token refreshed',
     type: AuthResponseDto,
@@ -52,7 +52,7 @@ export class AuthController {
   @HttpCode(200)
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Logout user' })
-  @ApiBearerAuth()
+  @ApiBearerAuth('accessToken')
   @ApiOkResponse({ description: 'User logged out', type: LogoutResponseDto })
   @ApiUnauthorizedResponse({ description: 'Invalid or missing access token' })
   async logout(@GetUser('id') userId: string): Promise<LogoutResponseDto> {
