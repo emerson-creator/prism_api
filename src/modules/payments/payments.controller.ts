@@ -2,6 +2,7 @@ import { Controller, Post, Get } from '@nestjs/common';
 import { UseGuards } from '@nestjs/common';
 import {
   ApiBearerAuth,
+  ApiBody,
   ApiOperation,
   ApiParam,
   ApiResponse,
@@ -21,12 +22,13 @@ import { ConfirmPaymentDto } from './dto/confirm-payment.dto';
 @Controller('payments')
 @UseGuards(JwtAuthGuard)
 @ApiTags('Payments')
-@ApiBearerAuth()
+@ApiBearerAuth('accessToken')
 export class PaymentsController {
   constructor(private readonly paymentsService: PaymentsService) {}
 
   @Post('create-intent')
   @ApiOperation({ summary: 'Create a payment intent' })
+  @ApiBody({ type: CreatePaymentIntentDto })
   @ApiResponse({ status: 400, description: 'The order cannot be paid.' })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
   @ApiResponse({ status: 404, description: 'Order not found.' })
@@ -47,6 +49,7 @@ export class PaymentsController {
 
   @Post('confirm')
   @ApiOperation({ summary: 'Confirm a payment intent' })
+  @ApiBody({ type: ConfirmPaymentDto })
   @ApiResponse({ status: 400, description: 'Payment confirmation failed.' })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
   @ApiResponse({ status: 404, description: 'Payment or order not found.' })
@@ -105,5 +108,4 @@ export class PaymentsController {
   ) {
     return await this.paymentsService.findByOrderId(orderId, userId);
   }
-
 }
