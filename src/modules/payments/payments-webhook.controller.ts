@@ -63,6 +63,12 @@ export class PaymentsWebhookController {
       case 'payment_intent.payment_failed':
         await this.paymentsService.handlePaymentIntentFailed(event.data.object);
         break;
+      case 'charge.refunded':
+        // Confirms a refund actually settled on Stripe's side — whether
+        // it was triggered by our own refundPayment() call, or manually
+        // from the Stripe dashboard. Idempotent, same as the cases above.
+        await this.paymentsService.handleChargeRefunded(event.data.object);
+        break;
     }
 
     return { received: true };
