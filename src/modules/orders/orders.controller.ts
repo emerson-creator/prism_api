@@ -32,7 +32,7 @@ import { PaginatedOrderResponseDto } from './dto/order-response.dto';
 import { OrderStatus as QueryOrderStatus } from './dto/query-order.dto';
 
 @ApiTags('Orders')
-@ApiBearerAuth()
+@ApiBearerAuth('accessToken')
 @Controller('orders')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class OrdersController {

@@ -16,6 +16,7 @@ import { UpdateItemDto } from './dto/update-item.dto';
 import { CheckoutDto } from './dto/checkout.dto';
 import {
   ApiBearerAuth,
+  ApiBody,
   ApiOperation,
   ApiParam,
   ApiResponse,
@@ -25,7 +26,7 @@ import {
 @UseGuards(JwtAuthGuard)
 @Controller('cart')
 @ApiTags('Cart')
-@ApiBearerAuth()
+@ApiBearerAuth('accessToken')
 export class CartController {
   constructor(private readonly cartService: CartService) {}
 
@@ -39,8 +40,12 @@ export class CartController {
 
   @Post('items')
   @ApiOperation({ summary: 'Add a product to the cart' })
+  @ApiBody({ type: AddItemDto })
   @ApiResponse({ status: 201, description: 'Item added successfully.' })
-  @ApiResponse({ status: 400, description: 'Invalid quantity or insufficient stock.' })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid quantity or insufficient stock.',
+  })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
   @ApiResponse({ status: 404, description: 'Product not found.' })
   addItem(@GetUser('id') userId: string, @Body() dto: AddItemDto) {
@@ -49,9 +54,13 @@ export class CartController {
 
   @Patch('items/:itemId')
   @ApiOperation({ summary: 'Update a cart item quantity' })
+  @ApiBody({ type: UpdateItemDto })
   @ApiParam({ name: 'itemId', description: 'Cart item ID' })
   @ApiResponse({ status: 200, description: 'Cart item updated successfully.' })
-  @ApiResponse({ status: 400, description: 'Invalid quantity or insufficient stock.' })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid quantity or insufficient stock.',
+  })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
   @ApiResponse({ status: 404, description: 'Cart item not found.' })
   updateItem(
@@ -82,8 +91,12 @@ export class CartController {
 
   @Post('checkout')
   @ApiOperation({ summary: 'Create an order from the current cart' })
+  @ApiBody({ type: CheckoutDto })
   @ApiResponse({ status: 201, description: 'Checkout completed successfully.' })
-  @ApiResponse({ status: 400, description: 'Cart is empty or stock is insufficient.' })
+  @ApiResponse({
+    status: 400,
+    description: 'Cart is empty or stock is insufficient.',
+  })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
   checkout(@GetUser('id') userId: string, @Body() dto: CheckoutDto) {
     return this.cartService.checkout(userId, dto);
