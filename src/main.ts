@@ -52,13 +52,14 @@ async function bootstrap() {
   const config = new DocumentBuilder()
     .setTitle('E-commerce API')
     .setDescription('API documentation for the E-commerce application')
-    .addTag('auth')
-    .addTag('users')
-    .addTag('products')
-    .addApiKey(
-      { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' },
-      'Authorization',
-    )
+    .addTag('Auth')
+    .addTag('Users')
+    .addTag('Products')
+    .addTag('Categories')
+    .addTag('Cart')
+    .addTag('Orders')
+    .addTag('Payments')
+    .addTag('Webhooks')
     .addBearerAuth(
       {
         type: 'http',
@@ -75,9 +76,6 @@ async function bootstrap() {
       },
       'accessToken',
     )
-    .addSecurityRequirements('Authorization')
-    .addSecurityRequirements('refreshToken')
-    .addSecurityRequirements('accessToken')
     .setVersion('1.0')
     .addServer('http://localhost:3000', 'Local server')
     .build();
