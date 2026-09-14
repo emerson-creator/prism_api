@@ -1,6 +1,12 @@
 import { Controller, Get, Post, Query } from '@nestjs/common';
 import { CategoryService } from './category.service';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiParam,
+  ApiQuery,
+  ApiTags,
+} from '@nestjs/swagger';
 import { UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -26,7 +32,7 @@ export class CategoryController {
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.ADMIN)
-  @ApiBearerAuth('Admin access required')
+  @ApiBearerAuth('accessToken')
   @ApiOperation({ summary: 'Create a new category' })
   @ApiBody({ type: CreateCategoryDto })
   @ApiResponse({
@@ -55,6 +61,24 @@ export class CategoryController {
   // get all categories (Public)
   @Get()
   @ApiOperation({ summary: 'Get all categories' })
+  @ApiQuery({
+    name: 'page',
+    required: false,
+    description: 'Page number.',
+    example: 1,
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    description: 'Items per page.',
+    example: 10,
+  })
+  @ApiQuery({
+    name: 'search',
+    required: false,
+    description: 'Search by name or description.',
+  })
+  @ApiQuery({ name: 'isActive', required: false, type: Boolean })
   @ApiResponse({
     status: 200,
     description: 'List of categories retrieved successfully.',
@@ -70,6 +94,11 @@ export class CategoryController {
   // get category by slug (Public)
   @Get('slug/:slug')
   @ApiOperation({ summary: 'Get category by slug' })
+  @ApiParam({
+    name: 'slug',
+    description: 'Category slug',
+    example: 'electronics',
+  })
   @ApiResponse({
     status: 200,
     description: 'Category retrieved successfully.',
@@ -86,6 +115,7 @@ export class CategoryController {
   // get category by id (Public)
   @Get(':id')
   @ApiOperation({ summary: 'Get category by ID' })
+  @ApiParam({ name: 'id', description: 'Category ID' })
   @ApiResponse({
     status: 200,
     description: 'Category retrieved successfully.',
@@ -103,8 +133,9 @@ export class CategoryController {
   @Patch(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.ADMIN)
-  @ApiBearerAuth('Admin access required')
+  @ApiBearerAuth('accessToken')
   @ApiOperation({ summary: 'Update a category' })
+  @ApiParam({ name: 'id', description: 'Category ID' })
   @ApiBody({ type: UpdateCategoryDto })
   @ApiResponse({
     status: 200,
@@ -134,8 +165,9 @@ export class CategoryController {
   @Delete(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.ADMIN)
-  @ApiBearerAuth('Admin access required')
+  @ApiBearerAuth('accessToken')
   @ApiOperation({ summary: 'Delete a category' })
+  @ApiParam({ name: 'id', description: 'Category ID' })
   @ApiResponse({
     status: 200,
     description: 'Category deleted successfully.',

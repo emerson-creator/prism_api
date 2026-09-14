@@ -1,5 +1,5 @@
 import { Controller, Delete } from '@nestjs/common';
-import { ApiConsumes, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiConsumes, ApiTags } from '@nestjs/swagger';
 import { ProductsService } from './products.service';
 import {
   Body,
@@ -17,7 +17,13 @@ import { Roles } from '../../common/decorators/roles.decorator';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Role } from '@prisma/client';
-import { ApiOperation, ApiResponse } from '@nestjs/swagger';
+import {
+  ApiBody,
+  ApiOperation,
+  ApiParam,
+  ApiQuery,
+  ApiResponse,
+} from '@nestjs/swagger';
 import { CreateProductDto } from './dto/create-product.dto';
 import { Query } from '@nestjs/common';
 import { QueryProductsDto } from './dto/query-product.dto';
@@ -37,7 +43,9 @@ export class ProductsController {
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.ADMIN)
+  @ApiBearerAuth('accessToken')
   @ApiOperation({ summary: 'Create a new product' })
+  @ApiBody({ type: CreateProductDto })
   @ApiResponse({
     status: 201,
     description: 'The product has been successfully created.',
@@ -57,6 +65,7 @@ export class ProductsController {
   @Post('upload-image')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.ADMIN)
+  @ApiBearerAuth('accessToken')
   @UseInterceptors(
     FileInterceptor('file', {
       storage: memoryStorage(),
@@ -64,6 +73,13 @@ export class ProductsController {
     }),
   )
   @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: { file: { type: 'string', format: 'binary' } },
+      required: ['file'],
+    },
+  })
   @ApiOperation({ summary: 'Upload a product image (admin only)' })
   @ApiResponse({
     status: 201,
@@ -85,6 +101,29 @@ export class ProductsController {
   // get all products endpoint
   @Get()
   @ApiOperation({ summary: 'Get all products' })
+  @ApiQuery({
+    name: 'page',
+    required: false,
+    description: 'Page number.',
+    example: 1,
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    description: 'Items per page.',
+    example: 10,
+  })
+  @ApiQuery({
+    name: 'category',
+    required: false,
+    description: 'Filter by category name.',
+  })
+  @ApiQuery({
+    name: 'search',
+    required: false,
+    description: 'Search by name or description.',
+  })
+  @ApiQuery({ name: 'isActive', required: false, type: Boolean })
   @ApiResponse({
     status: 200,
     description: 'List of products retrieved successfully.',
@@ -97,6 +136,7 @@ export class ProductsController {
   // Get product by ID endpoint
   @Get(':id')
   @ApiOperation({ summary: 'Get a product by ID' })
+  @ApiParam({ name: 'id', description: 'Product ID' })
   @ApiResponse({
     status: 200,
     description: 'The product has been successfully retrieved.',
@@ -111,7 +151,10 @@ export class ProductsController {
   @Patch(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.ADMIN)
+  @ApiBearerAuth('accessToken')
   @ApiOperation({ summary: 'Update a product by ID' })
+  @ApiParam({ name: 'id', description: 'Product ID' })
+  @ApiBody({ type: UpdateProductDto })
   @ApiResponse({
     status: 200,
     description: 'The product has been successfully updated.',
@@ -133,7 +176,16 @@ export class ProductsController {
   @Post(':id/stock')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.ADMIN)
+  @ApiBearerAuth('accessToken')
   @ApiOperation({ summary: 'Update product stock by ID' })
+  @ApiParam({ name: 'id', description: 'Product ID' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: { quantity: { type: 'integer', example: 5 } },
+      required: ['quantity'],
+    },
+  })
   @ApiResponse({
     status: 200,
     description: 'The product stock has been successfully updated.',
@@ -155,7 +207,9 @@ export class ProductsController {
   @Delete(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.ADMIN)
+  @ApiBearerAuth('accessToken')
   @ApiOperation({ summary: 'Remove a product by ID' })
+  @ApiParam({ name: 'id', description: 'Product ID' })
   @ApiResponse({
     status: 200,
     description: 'The product has been successfully removed.',
