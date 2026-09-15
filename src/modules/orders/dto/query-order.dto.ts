@@ -2,13 +2,9 @@
 import { Type } from 'class-transformer';
 import { IsOptional, IsEnum, IsString } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
+import { OrderStatus } from '@prisma/client';
 
-export enum OrderStatus {
-  PENDING = 'PENDING',
-  SHIPPED = 'SHIPPED',
-  DELIVERED = 'DELIVERED',
-  CANCELLED = 'CANCELLED',
-}
+export { OrderStatus };
 
 export class QueryOrderDto {
   @ApiPropertyOptional({ description: 'Page number', example: 1, minimum: 1 })
@@ -16,12 +12,19 @@ export class QueryOrderDto {
   @Type(() => Number)
   page?: number;
 
-  @ApiPropertyOptional({ description: 'Number of orders per page', example: 10, minimum: 1 })
+  @ApiPropertyOptional({
+    description: 'Number of orders per page',
+    example: 10,
+    minimum: 1,
+  })
   @IsOptional()
   @Type(() => Number)
   limit?: number;
 
-  @ApiPropertyOptional({ enum: OrderStatus, description: 'Filter by order status' })
+  @ApiPropertyOptional({
+    enum: OrderStatus,
+    description: 'Filter by order status',
+  })
   @IsOptional()
   @IsEnum(OrderStatus)
   status?: OrderStatus;
