@@ -6,7 +6,11 @@ export class CreatePaymentIntentDto {
   @IsNotEmpty()
   orderId!: string;
 
-  @ApiPropertyOptional({ description: 'Three-letter ISO currency code', example: 'usd', default: 'usd' })
+  @ApiPropertyOptional({
+    description: 'Three-letter ISO currency code',
+    example: 'usd',
+    default: 'usd',
+  })
   @IsOptional()
   @IsString()
   currency?: string = 'usd';

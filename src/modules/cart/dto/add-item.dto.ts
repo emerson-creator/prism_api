@@ -6,7 +6,11 @@ export class AddItemDto {
   @IsString()
   productId!: string;
 
-  @ApiProperty({ description: 'Number of units to add', example: 2, minimum: 1 })
+  @ApiProperty({
+    description: 'Number of units to add',
+    example: 2,
+    minimum: 1,
+  })
   @IsInt()
   @IsPositive()
   quantity!: number;
