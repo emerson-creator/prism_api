@@ -41,6 +41,7 @@ COPY --from=builder /app/dist ./dist
 # NestJS default port; overridden by PORT env var if the platform sets one.
 EXPOSE 3000
 
+# Healthcheck endpoint for Docker to verify the app is running.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
   CMD wget --spider -q http://localhost:3000/api/v1/health || exit 1
 
