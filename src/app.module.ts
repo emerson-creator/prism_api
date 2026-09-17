@@ -13,6 +13,7 @@ import { PaymentsModule } from './modules/payments/payments.module';
 import { CartModule } from './modules/cart/cart.module';
 import { MailModule } from './modules/mail/mail.module';
 import { ScheduleModule } from '@nestjs/schedule';
+import { HealthModule } from './modules/health/health.module';
 
 @Module({
   imports: [
@@ -37,6 +38,7 @@ import { ScheduleModule } from '@nestjs/schedule';
     // Enables @Cron() decorators anywhere in the app — required once,
     // globally, for OrdersCleanupTask's hourly job to actually run.
     ScheduleModule.forRoot(),
+    HealthModule,
   ],
   controllers: [AppController],
   providers: [AppService],
