@@ -6,8 +6,8 @@ export class HealthController {
   check() {
     return {
       status: 'ok',
+      message: 'Service is running',
       timestamp: new Date().toISOString(),
-      uptime: process.uptime(),
     };
   }
 }
