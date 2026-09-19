@@ -70,7 +70,7 @@ jobs:
             SUCCESS=0
 
             for i in $(seq 1 $RETRIES); do
-              if curl --fail -s http://localhost:3000/api/v1/health-rollback-test > /dev/null; then
+              if curl --fail -s http://localhost:3000/api/v1/health > /dev/null; then
                 echo "Health check successful on attempt $i"
                 SUCCESS=1
                 break
@@ -83,6 +83,8 @@ jobs:
             if [ $SUCCESS -eq 0 ]; then
 
               echo "API deployment failed."
+              echo "Checking API logs..."
+              docker logs prism-api-1 --tail 200 || true
               echo "Starting rollback to $PREVIOUS_TAG..."
 
               API_TAG=$PREVIOUS_TAG docker compose pull api
