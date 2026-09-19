@@ -1,14 +1,11 @@
 name: CD
 
 on:
-  workflow_run:
-    workflows: ['CI']
-    types: [completed]
+  push:
     branches: [main]
 
 jobs:
   build-and-push:
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
 
     steps:
@@ -26,7 +23,9 @@ jobs:
         with:
           context: .
           push: true
-          tags: emersonic/prism-ecommerce-api:latest
+          tags: |
+            emersonic/prism-ecommerce-api:latest
+            emersonic/prism-ecommerce-api:${{ github.sha }}
 
   deploy:
     needs: build-and-push
@@ -39,8 +38,83 @@ jobs:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
+
           script: |
+            set -e
+
             cd ~/prism
-            docker compose pull api
-            docker compose up -d api
+
+            NEW_TAG="${{ github.sha }}"
+
+            echo "New API version: $NEW_TAG"
+
+            # Get currently deployed version
+            if [ -f .current_api_tag ]; then
+              PREVIOUS_TAG=$(cat .current_api_tag)
+            else
+              PREVIOUS_TAG="latest"
+            fi
+
+            echo "Previous API version: $PREVIOUS_TAG"
+
+            # Pull new image
+            API_TAG=$NEW_TAG docker compose pull api
+
+            # Deploy new version
+            API_TAG=$NEW_TAG docker compose up -d api
+
+            echo "Waiting for API..."
+
+            RETRIES=10
+            DELAY=3
+            SUCCESS=0
+
+            for i in $(seq 1 $RETRIES); do
+              if curl --fail -s http://localhost:3000/api/v1/health > /dev/null; then
+                echo "Health check successful on attempt $i"
+                SUCCESS=1
+                break
+              fi
+
+              echo "Attempt $i/$RETRIES: API not ready. Retrying in ${DELAY}s..."
+              sleep $DELAY
+            done
+
+            if [ $SUCCESS -eq 0 ]; then
+
+              echo "API deployment failed."
+              echo "Starting rollback to $PREVIOUS_TAG..."
+
+              API_TAG=$PREVIOUS_TAG docker compose pull api
+              API_TAG=$PREVIOUS_TAG docker compose up -d api
+
+              echo "Checking rollback..."
+
+              ROLLBACK_SUCCESS=0
+
+              for i in $(seq 1 $RETRIES); do
+                if curl --fail -s http://localhost:3000/api/v1/health > /dev/null; then
+                  echo "Rollback successful."
+                  ROLLBACK_SUCCESS=1
+                  break
+                fi
+
+                echo "Rollback attempt $i/$RETRIES..."
+                sleep $DELAY
+              done
+
+              if [ $ROLLBACK_SUCCESS -eq 0 ]; then
+                echo "CRITICAL: Rollback failed."
+                exit 1
+              fi
+
+              exit 1
+            fi
+
+            # Save successfully deployed version
+            echo "$NEW_TAG" > .current_api_tag
+
+            echo "API deployment successful!"
+            echo "Running version: $NEW_TAG"
+
             docker image prune -f
