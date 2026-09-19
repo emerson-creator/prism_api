@@ -67,7 +67,7 @@ export class MailService {
   async sendOrderShippedEmail(order: OrderWithDetails) {
     await this.send(
       order.user.email,
-      `Your order #${order.orderNumber} is on its way`,
+      `Your order #${order.orderNumber} is on its way!`,
       this.orderShippedTemplate(order),
     );
   }
