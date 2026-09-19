@@ -70,7 +70,7 @@ jobs:
             SUCCESS=0
 
             for i in $(seq 1 $RETRIES); do
-              if curl --fail -s http://localhost:3000/api/v1/health > /dev/null; then
+              if curl --fail -s http://localhost:3000/api/v1/health-rollback-test > /dev/null; then
                 echo "Health check successful on attempt $i"
                 SUCCESS=1
                 break
