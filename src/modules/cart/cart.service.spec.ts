@@ -1,7 +1,4 @@
-import {
-  BadRequestException,
-  NotFoundException,
-} from '@nestjs/common';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CartService } from './cart.service';
@@ -77,10 +74,7 @@ describe('CartService', () => {
     (generateOrderNumber as jest.Mock).mockResolvedValue('ORD-123');
 
     const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        CartService,
-        { provide: PrismaService, useValue: prisma },
-      ],
+      providers: [CartService, { provide: PrismaService, useValue: prisma }],
     }).compile();
 
     service = module.get<CartService>(CartService);
@@ -175,10 +169,7 @@ describe('CartService', () => {
       prisma.product.findUnique.mockResolvedValue(null);
 
       await expect(
-        service.addItem('user-1', {
-          productId: 'missing-product',
-          quantity: 1,
-        }),
+        service.addItem('user-1', { productId: 'missing-product', quantity: 1 }),
       ).rejects.toThrow(NotFoundException);
 
       expect(prisma.cart.findFirst).not.toHaveBeenCalled();
@@ -191,10 +182,7 @@ describe('CartService', () => {
       });
 
       await expect(
-        service.addItem('user-1', {
-          productId: 'product-1',
-          quantity: 1,
-        }),
+        service.addItem('user-1', { productId: 'product-1', quantity: 1 }),
       ).rejects.toThrow(NotFoundException);
     });
 
@@ -205,10 +193,7 @@ describe('CartService', () => {
       });
 
       await expect(
-        service.addItem('user-1', {
-          productId: 'product-1',
-          quantity: 2,
-        }),
+        service.addItem('user-1', { productId: 'product-1', quantity: 2 }),
       ).rejects.toThrow(BadRequestException);
 
       expect(prisma.cartItem.create).not.toHaveBeenCalled();
@@ -225,10 +210,7 @@ describe('CartService', () => {
       );
 
       await expect(
-        service.addItem('user-1', {
-          productId: 'product-1',
-          quantity: 2,
-        }),
+        service.addItem('user-1', { productId: 'product-1', quantity: 2 }),
       ).rejects.toThrow(BadRequestException);
 
       expect(prisma.cartItem.update).not.toHaveBeenCalled();
@@ -297,9 +279,9 @@ describe('CartService', () => {
       prisma.cart.findFirst.mockResolvedValue(makeCart());
       prisma.cartItem.findFirst.mockResolvedValue(null);
 
-      await expect(
-        service.removeItem('user-1', 'other-item'),
-      ).rejects.toThrow(NotFoundException);
+      await expect(service.removeItem('user-1', 'other-item')).rejects.toThrow(
+        NotFoundException,
+      );
 
       expect(prisma.cartItem.delete).not.toHaveBeenCalled();
     });
@@ -326,9 +308,9 @@ describe('CartService', () => {
     it('rejects checkout when the cart is empty', async () => {
       prisma.cart.findFirst.mockResolvedValue(makeCart());
 
-      await expect(
-        service.checkout('user-1', checkoutDto),
-      ).rejects.toThrow(BadRequestException);
+      await expect(service.checkout('user-1', checkoutDto)).rejects.toThrow(
+        BadRequestException,
+      );
 
       expect(prisma.$transaction).not.toHaveBeenCalled();
     });
@@ -344,9 +326,9 @@ describe('CartService', () => {
         }),
       );
 
-      await expect(
-        service.checkout('user-1', checkoutDto),
-      ).rejects.toThrow(BadRequestException);
+      await expect(service.checkout('user-1', checkoutDto)).rejects.toThrow(
+        BadRequestException,
+      );
 
       expect(prisma.$transaction).not.toHaveBeenCalled();
     });
@@ -363,9 +345,9 @@ describe('CartService', () => {
         }),
       );
 
-      await expect(
-        service.checkout('user-1', checkoutDto),
-      ).rejects.toThrow(BadRequestException);
+      await expect(service.checkout('user-1', checkoutDto)).rejects.toThrow(
+        BadRequestException,
+      );
 
       expect(prisma.$transaction).not.toHaveBeenCalled();
     });
@@ -400,9 +382,9 @@ describe('CartService', () => {
       tx.order.create.mockResolvedValue(createdOrder);
       tx.cart.update.mockResolvedValue({ ...cart, checkedOut: true });
 
-      await expect(
-        service.checkout('user-1', checkoutDto),
-      ).resolves.toBe(createdOrder);
+      await expect(service.checkout('user-1', checkoutDto)).resolves.toBe(
+        createdOrder,
+      );
 
       expect(generateOrderNumber).toHaveBeenCalledWith(tx);
       expect(tx.order.create).toHaveBeenCalledWith({

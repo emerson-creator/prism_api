@@ -33,9 +33,7 @@ describe('CartController', () => {
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [CartController],
-      providers: [
-        { provide: CartService, useValue: cartService },
-      ],
+      providers: [{ provide: CartService, useValue: cartService }],
     }).compile();
 
     controller = module.get<CartController>(CartController);
@@ -97,14 +95,11 @@ describe('CartController', () => {
     it('passes the user ID and item ID to the service', async () => {
       cartService.removeItem.mockResolvedValue(cart);
 
-      await expect(
-        controller.removeItem('user-1', 'item-1'),
-      ).resolves.toBe(cart);
-
-      expect(cartService.removeItem).toHaveBeenCalledWith(
-        'user-1',
-        'item-1',
+      await expect(controller.removeItem('user-1', 'item-1')).resolves.toBe(
+        cart,
       );
+
+      expect(cartService.removeItem).toHaveBeenCalledWith('user-1', 'item-1');
     });
   });
 
@@ -123,9 +118,7 @@ describe('CartController', () => {
       const order = { id: 'order-1', total: 51 };
       cartService.checkout.mockResolvedValue(order);
 
-      await expect(
-        controller.checkout('user-1', dto),
-      ).resolves.toBe(order);
+      await expect(controller.checkout('user-1', dto)).resolves.toBe(order);
 
       expect(cartService.checkout).toHaveBeenCalledWith('user-1', dto);
     });

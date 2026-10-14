@@ -1,43 +1,81 @@
-# Prism E-commerce API
+# Prism — E-commerce API
 
-Backend API for an e-commerce platform built with NestJS, TypeScript, PostgreSQL, and Prisma.
+A RESTful backend for an e-commerce platform, built with NestJS, TypeScript, PostgreSQL, and Prisma.
 
-The API provides authentication, user management, product and category administration, shopping carts, orders, and Stripe payments. It also supports Cloudinary image uploads and transactional order emails.
+Prism provides the core backend capabilities of an online store, including authentication, catalog management, shopping carts, order processing, and payment integration. The project emphasizes modular architecture, input validation, access control, and automated testing.
 
 ## Features
 
-- JWT authentication with access and refresh tokens
-- Role-based access control for administrators
-- Product and category management
-- Shopping carts and checkout workflows
-- Order tracking and payment status management
-- Stripe payment intents and webhook handling
-- Cloudinary image storage
-- Swagger/OpenAPI documentation
-- Request validation, CORS, and throttling
+- **Authentication and authorization:** JWT access and refresh tokens, protected routes, and role-based access control.
+- **Catalog management:** Product and category CRUD operations.
+- **Shopping cart:** Cart management and checkout workflows.
+- **Order management:** Order creation, status tracking, and inventory updates.
+- **Payments:** Stripe PaymentIntents, payment confirmation, webhook handling, and refunds.
+- **Media uploads:** Cloudinary integration for product images.
+- **Transactional email:** Resend integration for order-related notifications.
+- **API documentation:** Interactive Swagger/OpenAPI documentation.
+- **API protection:** Request validation, CORS configuration, and rate limiting.
+- **Automated tests:** Jest unit tests for controllers and services.
 
-## Requirements
+## Architecture
+
+```mermaid
+flowchart LR
+    Client[Client / Frontend] -->|HTTPS /api/v1| API
+
+    subgraph API[NestJS API]
+        direction TB
+        MW[Rate limiting · CORS · Validation] --> Guards[JWT Guard · Roles Guard]
+        Guards --> Modules[auth · users · products · category<br/>cart · orders · payments · mail · cloudinary]
+        Modules --> Prisma[Prisma Service]
+    end
+
+    Prisma --> DB[(PostgreSQL)]
+    Modules -->|PaymentIntents · refunds| Stripe[Stripe]
+    Stripe -->|webhook events| Modules
+    Modules -->|product images| Cloudinary[Cloudinary]
+    Modules -->|order emails| Resend[Resend]
+```
+
+## Tech Stack
+
+| Area              | Technology            |
+| ----------------- | --------------------- |
+| Framework         | NestJS                |
+| Language          | TypeScript            |
+| Database          | PostgreSQL            |
+| ORM               | Prisma                |
+| Authentication    | JWT, Passport, bcrypt |
+| Payments          | Stripe                |
+| Image storage     | Cloudinary            |
+| Email             | Resend                |
+| API documentation | Swagger / OpenAPI     |
+| Testing           | Jest, Supertest       |
+
+## Getting Started
+
+### Prerequisites
 
 - Node.js 20 or later
 - npm
-- PostgreSQL database
-- Stripe account for payment features
+- PostgreSQL
+- Stripe, Cloudinary, and Resend credentials for the integrations you want to use
 
-## Getting started
+### Installation
 
 ```bash
 npm install
 ```
 
-Create a `.env` file in the project root:
+Create a `.env` file in the project root and configure the environment variables required by the application.
 
 ```env
-DATABASE_URL="postgresql://USER:PASSWORD@localhost:5432/prism_ecommerce?schema=public"
+DATABASE_URL="your-database-connection-string"
 PORT=3000
 CORS_ORIGIN="http://localhost:3001"
 
-JWT_SECRET="replace-with-a-long-random-secret"
-JWT_REFRESH_SECRET="replace-with-another-long-random-secret"
+JWT_SECRET="your-access-token-secret"
+JWT_REFRESH_SECRET="your-refresh-token-secret"
 
 STRIPE_SECRET_KEY="sk_test_..."
 STRIPE_WEBHOOK_SECRET="whsec_..."
@@ -50,115 +88,132 @@ RESEND_API_KEY="re_..."
 MAIL_FROM="noreply@example.com"
 ```
 
-Use the credentials and URLs provided by each service. Keep `.env` out of version control.
+Use valid credentials for your environment. Never commit real secrets to version control.
 
-## Database
+### Database Setup
 
-Generate the Prisma client and apply development migrations:
+Generate the Prisma client:
 
 ```bash
 npm run prisma:generate
-npx prisma migrate dev
 ```
 
-To inspect the database with Prisma Studio:
+Apply database migrations using the migration workflow configured for this project.
+
+### Run the API
 
 ```bash
-npx prisma studio
-```
-
-## Running the API
-
-```bash
-# development
-npm run start
-
-# watch mode
+# Development
 npm run start:dev
 
-# production mode
+# Production build
 npm run build
 npm run start:prod
 ```
 
-The server runs on `http://localhost:3000` by default.
+By default, the API listens on port `3000`, subject to your environment configuration.
 
-## API documentation
+## API Documentation
 
-Swagger documentation is available at `http://localhost:3000/api/docs`.
+When the application is running, open Swagger at:
 
-All API routes use the `/api/v1` prefix. For example:
+`http://localhost:3000/api/docs`
+
+API routes use the `/api/v1` prefix. Example endpoints include:
 
 ```text
-POST http://localhost:3000/api/v1/auth/login
-GET  http://localhost:3000/api/v1/products
+POST /api/v1/auth/login
+GET  /api/v1/products
 ```
 
-The `requests/` directory contains HTTP request examples for authentication, products, categories, orders, and payments. Protected routes require a JWT access token:
+Protected endpoints require a valid access token:
 
 ```text
 Authorization: Bearer <access-token>
 ```
 
-## Stripe webhooks
+The `requests/` directory contains example HTTP requests for selected API workflows.
 
-Configure Stripe to send payment events to:
+## Payments and Webhooks
 
-```text
-POST http://localhost:3000/api/v1/payments/webhook
+Prism integrates with Stripe PaymentIntents and processes payment-related webhook events.
+
+For local development, configure Stripe CLI or another supported webhook-forwarding method to send events to:
+
+`POST /api/v1/payments/webhook`
+
+Set `STRIPE_WEBHOOK_SECRET` to the signing secret for the configured endpoint. Use Stripe test credentials during development.
+
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant A as Prism API
+    participant S as Stripe
+    participant M as Resend
+
+    C->>A: POST /orders (checkout)
+    A->>S: Create PaymentIntent
+    S-->>A: client_secret
+    A-->>C: order + client_secret
+    C->>S: Confirm payment
+    S->>A: POST /payments/webhook (signed)
+    A->>A: Verify signature, update order status
+    A->>M: Send confirmation email
 ```
 
-Set `STRIPE_WEBHOOK_SECRET` to the signing secret for this endpoint. The application preserves the raw request body so Stripe signatures can be verified.
+## Testing
 
-## Run tests
+Run the unit test suite:
 
 ```bash
-# unit tests
-npm run test
+npm test -- --runInBand
+```
 
-# e2e tests
+Run end-to-end tests:
+
+```bash
 npm run test:e2e
+```
 
-# test coverage
+Generate a coverage report:
+
+```bash
 npm run test:cov
 ```
 
-## Project structure
+The current unit test baseline is **192 passing tests across 16 test suites**, with **70.62% line coverage**. Coverage figures may change as the codebase evolves.
+
+## Project Structure
 
 ```text
 src/
-  common/       Shared decorators, guards, interfaces, and utilities
+  common/       Shared decorators, guards, and utilities
   modules/
-    auth/       Registration, login, JWT, and refresh tokens
-    users/      User profiles and administration
-    products/   Product management
+    auth/       Authentication and token management
+    users/      User management
+    products/   Product catalog
     category/   Category management
-    cart/       Shopping carts
-    orders/     Orders and tracking
-    payments/   Stripe payments and webhooks
+    cart/       Shopping cart
+    orders/     Order workflows
+    payments/   Stripe integration and webhooks
     cloudinary/ Image upload integration
-    mail/       Transactional email integration
-  prisma/       Prisma database service
-prisma/
-  schema.prisma Database schema
-  migrations/   Database migrations
-requests/       HTTP request examples
+    mail/       Transactional email
+  prisma/       Database service
+
+prisma/         Database schema and migrations
+requests/       Example HTTP requests
+test/           End-to-end tests
 ```
 
-## Useful commands
+## Useful Commands
 
 ```bash
 npm run format
 npm run lint
 npm run build
+npm run test:cov
 ```
 
-## Built with
+## Engineering Focus
 
-- [NestJS](https://nestjs.com/)
-- [Prisma](https://www.prisma.io/)
-- [PostgreSQL](https://www.postgresql.org/)
-- [Stripe](https://stripe.com/)
-- [Cloudinary](https://cloudinary.com/)
-- [Resend](https://resend.com/)
-
+This project demonstrates modular backend development, authentication and authorization, relational data modeling, payment workflow integration, error handling, and automated testing.

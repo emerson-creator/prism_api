@@ -34,9 +34,7 @@ describe('CategoryController', () => {
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [CategoryController],
-      providers: [
-        { provide: CategoryService, useValue: categoryService },
-      ],
+      providers: [{ provide: CategoryService, useValue: categoryService }],
     }).compile();
 
     controller = module.get<CategoryController>(CategoryController);
@@ -62,9 +60,7 @@ describe('CategoryController', () => {
       const error = new Error('Category creation failed');
       categoryService.create.mockRejectedValue(error);
 
-      await expect(
-        controller.createCategory({ name: 'Electronics' } as any),
-      ).rejects.toBe(error);
+      await expect(controller.createCategory({ name: 'Electronics' } as any)).rejects.toBe(error);
     });
   });
 
@@ -87,9 +83,7 @@ describe('CategoryController', () => {
     it('passes the slug to the service', async () => {
       categoryService.findBySlug.mockResolvedValue(category);
 
-      await expect(
-        controller.findBySlug('electronics'),
-      ).resolves.toBe(category);
+      await expect(controller.findBySlug('electronics')).resolves.toBe(category);
 
       expect(categoryService.findBySlug).toHaveBeenCalledWith('electronics');
     });
@@ -134,10 +128,7 @@ describe('CategoryController', () => {
       categoryService.update.mockRejectedValue(error);
 
       await expect(
-        controller.updateCategory(
-          'category-1',
-          { name: 'Updated Electronics' } as any,
-        ),
+        controller.updateCategory('category-1', { name: 'Updated Electronics' } as any),
       ).rejects.toBe(error);
     });
   });
@@ -148,9 +139,7 @@ describe('CategoryController', () => {
         message: 'Category deleted successfully.',
       });
 
-      await expect(
-        controller.deleteCategory('category-1'),
-      ).resolves.toEqual({
+      await expect(controller.deleteCategory('category-1')).resolves.toEqual({
         message: 'Category deleted successfully.',
       });
 
