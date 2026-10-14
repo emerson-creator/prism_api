@@ -181,7 +181,7 @@ export class ProductsService {
     const updatedProduct = await this.prisma.product.update({
       where: { id },
       data: {
-        stock: quantity,
+        stock: newStock,
       },
       include: { category: true },
     });
